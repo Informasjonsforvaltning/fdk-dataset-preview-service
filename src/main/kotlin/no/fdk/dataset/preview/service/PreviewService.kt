@@ -24,6 +24,8 @@ class PreviewService(
     companion object {
         val DELIMITERS = arrayOf(';', ',')
         const val NO_DELIMITER = '\u0000' //empty char
+        const val DEFAULT_ROWS = 100
+        const val MAX_ROWS = 1000
     }
 
     @Throws(IOException::class)
@@ -53,6 +55,8 @@ class PreviewService(
             LOGGER.debug("Detected delimiter $delimiter")
         }
 
+        val maxRows = if(maxNumberOfRows > MAX_ROWS) MAX_ROWS else maxNumberOfRows
+
         CSVFormat.DEFAULT.builder()
             .setDelimiter(delimiter)
             .build()
@@ -66,7 +70,7 @@ class PreviewService(
                     tableHeader.beautify()
                 }
 
-                while (it.hasNext() && (maxNumberOfRows <= 0 || tableRows.size < maxNumberOfRows)) {
+                while (it.hasNext() && (maxRows <= 0 || tableRows.size < maxRows)) {
                     tableRows.add(TableRow(it.next().toList()))
                 }
 
@@ -83,6 +87,6 @@ class PreviewService(
 
     @Throws(Exception::class)
     fun parseToTable(resourceUrl: String, maxNumberOfRows: Int?): Table {
-        return readCSV(resourceUrl, maxNumberOfRows ?: -1)
+        return readCSV(resourceUrl, maxNumberOfRows ?: DEFAULT_ROWS)
     }
 }
