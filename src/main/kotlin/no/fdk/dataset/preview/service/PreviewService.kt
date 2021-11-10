@@ -3,7 +3,6 @@ package no.fdk.dataset.preview.service
 import no.fdk.dataset.preview.model.Table
 import no.fdk.dataset.preview.model.TableHeader
 import no.fdk.dataset.preview.model.TableRow
-import okhttp3.OkHttpClient
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.io.input.BOMInputStream
 import org.slf4j.Logger
@@ -16,13 +15,16 @@ import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-
 private val LOGGER: Logger = LoggerFactory.getLogger(PreviewService::class.java)
 
 @Service
-class PreviewService {
-    private val DELIMITERS = arrayOf(';', ',')
-    private val NO_DELIMITER = '\u0000' //empty char
+class PreviewService(
+    private val downloader: FileDownloader
+) {
+    companion object {
+        val DELIMITERS = arrayOf(';', ',')
+        const val NO_DELIMITER = '\u0000' //empty char
+    }
 
     @Throws(IOException::class)
     private fun detectDelimiter(inputStream: InputStream): Char {
@@ -36,16 +38,22 @@ class PreviewService {
     }
 
     @Throws(Exception::class)
-    fun readCSV(resourceUrl: String, numberOfRows: Int): Table {
-        val downloader = FileDownloader(OkHttpClient())
-        var body = downloader.download(resourceUrl)
+    private fun readCSV(resourceUrl: String, maxNumberOfRows: Int): Table {
+        if(LOGGER.isDebugEnabled) {
+            LOGGER.debug("Reading CSV for $resourceUrl")
+        }
+
+        val body = downloader.download(resourceUrl)
         if(!isCsv(body.contentType()?.subtype)) {
             throw Exception("Invalid content type ${body.contentType().toString()}")
         }
 
-        val delimiter = detectDelimiter(body.byteStream());
+        val delimiter = detectDelimiter(body.byteStream())
+        if(LOGGER.isDebugEnabled) {
+            LOGGER.debug("Detected delimiter $delimiter")
+        }
 
-        return CSVFormat.DEFAULT.builder()
+        CSVFormat.DEFAULT.builder()
             .setDelimiter(delimiter)
             .build()
             .parse( InputStreamReader( BOMInputStream(
@@ -58,7 +66,7 @@ class PreviewService {
                     tableHeader.beautify()
                 }
 
-                while (it.hasNext() && (numberOfRows <= 0 || tableRows.size < numberOfRows)) {
+                while (it.hasNext() && (maxNumberOfRows <= 0 || tableRows.size < maxNumberOfRows)) {
                     tableRows.add(TableRow(it.next().toList()))
                 }
 
@@ -66,7 +74,7 @@ class PreviewService {
             }
     }
 
-    fun isCsv(subType: String?): Boolean {
+    private fun isCsv(subType: String?): Boolean {
         if (subType != null) {
             return subType.contains("csv") || subType.contains("vnd.ms-excel")
         }
@@ -74,7 +82,7 @@ class PreviewService {
     }
 
     @Throws(Exception::class)
-    fun parseToTable(resourceUrl: String, numberOfRows: Int?): Table {
-        return readCSV(resourceUrl, numberOfRows ?: -1)
+    fun parseToTable(resourceUrl: String, maxNumberOfRows: Int?): Table {
+        return readCSV(resourceUrl, maxNumberOfRows ?: -1)
     }
 }

@@ -3,9 +3,11 @@ package no.fdk.dataset.preview.service
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.ResponseBody
+import org.springframework.stereotype.Component
 import java.net.HttpURLConnection
 import java.util.concurrent.TimeUnit
 
+@Component
 class FileDownloader(okHttpClient: OkHttpClient) {
 
     companion object {
