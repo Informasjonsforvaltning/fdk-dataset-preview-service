@@ -8,7 +8,7 @@ import java.net.HttpURLConnection
 import java.util.concurrent.TimeUnit
 
 @Component
-class FileDownloader(okHttpClient: OkHttpClient) {
+class FileDownloader {
 
     companion object {
         private const val HTTP_TIMEOUT = 30
@@ -17,7 +17,7 @@ class FileDownloader(okHttpClient: OkHttpClient) {
     private var okHttpClient: OkHttpClient
 
     init {
-        val okHttpBuilder = okHttpClient.newBuilder()
+        val okHttpBuilder = OkHttpClient().newBuilder()
             .connectTimeout(HTTP_TIMEOUT.toLong(), TimeUnit.SECONDS)
             .readTimeout(HTTP_TIMEOUT.toLong(), TimeUnit.SECONDS)
         this.okHttpClient = okHttpBuilder.build()
