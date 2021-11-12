@@ -6,6 +6,20 @@ logging:
   level.org.apache.jena: ERROR
 server:
   port: 8080
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  metrics:
+    export:
+      statsd:
+        enabled: true
+        flavor: telegraf
+        host: fdk-monitoring-services-telegraf
+        port: 8125
+    tags:
+      application: fdk-dataset-preview-service
 
 ---
 spring:
