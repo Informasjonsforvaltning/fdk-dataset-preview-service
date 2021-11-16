@@ -1,8 +1,9 @@
 package no.fdk.dataset.preview.controller
 
-import no.fdk.dataset.preview.model.Preview
 import no.fdk.dataset.preview.model.PreviewRequest
+import no.fdk.dataset.preview.service.PreviewException
 import no.fdk.dataset.preview.service.PreviewService
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -13,8 +14,12 @@ class PreviewController(
     private val previewService: PreviewService
 ) {
     @PostMapping(consumes = ["application/json"])
-    fun preview(@RequestBody previewRequest: PreviewRequest): ResponseEntity<Preview> {
-        val table = previewService.parseToTable(previewRequest.url, previewRequest.rows)
-        return ResponseEntity.ok(Preview(table, ""))
+    fun preview(@RequestBody previewRequest: PreviewRequest): ResponseEntity<Any> {
+        return try {
+            val preview = previewService.readAndParseResource(previewRequest.url, previewRequest.rows)
+            ResponseEntity.ok(preview)
+        } catch(e: PreviewException) {
+            ResponseEntity<Any>(e.message, HttpStatus.BAD_REQUEST)
+        }
     }
 }

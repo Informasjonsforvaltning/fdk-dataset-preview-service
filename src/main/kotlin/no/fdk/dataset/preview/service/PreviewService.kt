@@ -1,15 +1,15 @@
 package no.fdk.dataset.preview.service
 
-import no.fdk.dataset.preview.model.Table
-import no.fdk.dataset.preview.model.TableHeader
-import no.fdk.dataset.preview.model.TableRow
+import no.fdk.dataset.preview.model.*
+import okhttp3.MediaType
 import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVParser
+import org.apache.commons.io.IOUtils
 import org.apache.commons.io.input.BOMInputStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.BufferedReader
-import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
@@ -28,7 +28,6 @@ class PreviewService(
         const val MAX_ROWS = 1000
     }
 
-    @Throws(IOException::class)
     private fun detectDelimiter(inputStream: InputStream): Char {
         BufferedReader(InputStreamReader(inputStream, StandardCharsets.UTF_8), 500).use { reader ->
             val line = reader.readLine()
@@ -39,54 +38,79 @@ class PreviewService(
         }
     }
 
-    @Throws(Exception::class)
-    private fun readCSV(resourceUrl: String, maxNumberOfRows: Int): Table {
-        if(LOGGER.isDebugEnabled) {
-            LOGGER.debug("Reading CSV for $resourceUrl")
+    private fun getMaxNumberOfRows(rows: Int?): Int {
+        if(rows == null) {
+            return DEFAULT_ROWS
         }
+        return if(rows > MAX_ROWS) MAX_ROWS else rows
+    }
 
-        val body = downloader.download(resourceUrl)
-        if(!isCsv(body.contentType()?.subtype)) {
-            throw Exception("Invalid content type ${body.contentType().toString()}")
-        }
+    fun readAndParseResource(resourceUrl: String, rows: Int?): Preview {
+        logDebug("Read and parse resource $resourceUrl")
 
-        val delimiter = detectDelimiter(body.byteStream())
-        if(LOGGER.isDebugEnabled) {
-            LOGGER.debug("Detected delimiter $delimiter")
-        }
+        try {
+            val body = downloader.download(resourceUrl)
+            if(isCsv(body.contentType())) {
+                logDebug("Parsing CSV")
+                val delimiter = detectDelimiter(body.byteStream())
+                logDebug("Detected delimiter $delimiter")
 
-        val maxRows = if(maxNumberOfRows > MAX_ROWS) MAX_ROWS else maxNumberOfRows
-
-        CSVFormat.DEFAULT.builder()
-            .setDelimiter(delimiter)
-            .build()
-            .parse( InputStreamReader( BOMInputStream(
-                downloader.download(resourceUrl).byteStream()), StandardCharsets.UTF_8)).use { parser ->
-                var tableHeader = TableHeader(arrayListOf())
-                val tableRows = arrayListOf<TableRow>()
-                val it = parser.iterator()
-                if(it.hasNext()) {
-                    tableHeader = TableHeader(it.next().toList())
-                    tableHeader.beautify()
-                }
-
-                while (it.hasNext() && (maxRows <= 0 || tableRows.size < maxRows)) {
-                    tableRows.add(TableRow(it.next().toList()))
-                }
-
-                return Table(tableHeader, tableRows)
+                CSVFormat.DEFAULT.builder()
+                    .setDelimiter(delimiter)
+                    .build()
+                    .parse( InputStreamReader( BOMInputStream(
+                        downloader.download(resourceUrl).byteStream()), StandardCharsets.UTF_8))
+                    .use { return  Preview(table = parseCSVToTable(it, getMaxNumberOfRows(rows)), plain = null) }
+            } else if(isPlain(body.contentType())) {
+                logDebug("Fetch plain content")
+                val plain = Plain(IOUtils.toString(body.byteStream(), StandardCharsets.UTF_8), body.contentType().toString())
+                return Preview(table=null, plain=plain)
             }
-    }
 
-    private fun isCsv(subType: String?): Boolean {
-        if (subType != null) {
-            return subType.contains("csv") || subType.contains("vnd.ms-excel")
+            throw PreviewException("Invalid content type ${body.contentType().toString()}")
+        } catch(e: Exception) {
+            logDebug("Unable to dowload resource $resourceUrl", e)
+            throw PreviewException("Unable to dowload resource $resourceUrl")
         }
-        return false
     }
 
-    @Throws(Exception::class)
-    fun parseToTable(resourceUrl: String, maxNumberOfRows: Int?): Table {
-        return readCSV(resourceUrl, maxNumberOfRows ?: DEFAULT_ROWS)
+    private fun parseCSVToTable(parser: CSVParser, maxNumberOfRows: Int): Table {
+        var tableHeader = TableHeader(arrayListOf())
+        val tableRows = arrayListOf<TableRow>()
+        val it = parser.iterator()
+        if(it.hasNext()) {
+            tableHeader = TableHeader(it.next().toList())
+            tableHeader.beautify()
+        }
+
+        while (it.hasNext() && (maxNumberOfRows <= 0 || tableRows.size < maxNumberOfRows)) {
+            tableRows.add(TableRow(it.next().toList()))
+        }
+
+        return Table(tableHeader, tableRows)
+    }
+
+    private fun isCsv(mediaType: MediaType?): Boolean {
+        if (mediaType == null) {
+            return false
+        }
+        return mediaType.subtype.contains("csv") || mediaType.subtype.contains("vnd.ms-excel")
+    }
+
+    private fun isPlain(mediaType: MediaType?): Boolean {
+        if (mediaType == null) {
+            return false
+        }
+        return mediaType.subtype.contains("xml") || mediaType.subtype.contains("json")
+    }
+
+    private fun logDebug(message: String) {
+        logDebug(message, null)
+    }
+
+    private fun logDebug(message: String, throwable: Throwable?) {
+        if(LOGGER.isDebugEnabled) {
+            LOGGER.debug(message, throwable)
+        }
     }
 }
