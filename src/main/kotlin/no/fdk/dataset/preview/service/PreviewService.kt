@@ -68,7 +68,7 @@ class PreviewService(
             }
 
             throw PreviewException("Invalid content type ${body.contentType().toString()}")
-        } catch(e: Exception) {
+        } catch(e: DownloadException) {
             logDebug("Unable to dowload resource $resourceUrl", e)
             throw PreviewException("Unable to dowload resource $resourceUrl")
         }

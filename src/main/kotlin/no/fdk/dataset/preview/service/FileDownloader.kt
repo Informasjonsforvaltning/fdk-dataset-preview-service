@@ -24,17 +24,22 @@ class FileDownloader {
     }
 
     fun download(url: String): ResponseBody {
-        val request = Request.Builder().url(url).build()
-        val response = okHttpClient.newCall(request).execute()
-        val body = response.body
-        val responseCode = response.code
-        if (responseCode >= HttpURLConnection.HTTP_OK &&
-            responseCode < HttpURLConnection.HTTP_MULT_CHOICE &&
-            body != null) {
+        try {
+            val request = Request.Builder().url(url).build()
+            val response = okHttpClient.newCall(request).execute()
+            val body = response.body
+            val responseCode = response.code
+            if (responseCode >= HttpURLConnection.HTTP_OK &&
+                responseCode < HttpURLConnection.HTTP_MULT_CHOICE &&
+                body != null
+            ) {
 
-            return body
-        } else {
-            throw IllegalArgumentException("Error occurred when do http get $url")
+                return body
+            } else {
+                throw DownloadException("Error occurred when do http get $url")
+            }
+        } catch(e: Exception) {
+            throw DownloadException(e.message)
         }
     }
 }
