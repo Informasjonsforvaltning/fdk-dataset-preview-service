@@ -1,0 +1,85 @@
+<result page="1" pages="383" posts="38204">
+    <entries>
+        <entry>
+            <tilsynsbesoektype>0</tilsynsbesoektype>
+            <poststed>Bergen</poststed>
+            <sakref>2016/14321</sakref>
+            <tilsynsobjektid>Z1109221353241620198KUOWI_Tilsynsobjekt</tilsynsobjektid>
+            <orgnummer>997046722</orgnummer>
+            <postnr>5014</postnr>
+            <dato>20012016</dato>
+            <navn>Baker Brun Telegrafen</navn>
+            <tema1_no>Rutiner og ledelse</tema1_no>
+            <tema3_nn>Mat-handtering og tillaging</tema3_nn>
+            <tema1_nn>Rutiner og leiing</tema1_nn>
+            <tema3_no>Mat-håndtering og tilberedning</tema3_no>
+            <tilsynid>Z1601210829297260239EKKLG_TilsynAvtale</tilsynid>
+            <adrlinje1>Starvhusgaen 4</adrlinje1>
+            <karakter1>0</karakter1>
+            <adrlinje2/>
+            <karakter2>1</karakter2>
+            <karakter3>1</karakter3>
+            <karakter4>1</karakter4>
+            <total_karakter>1</total_karakter>
+            <tema4_no>Merking og sporbarhet</tema4_no>
+            <tema4_nn>Merking og sporbarheit</tema4_nn>
+            <tema2_no>Lokaler og utstyr</tema2_no>
+            <status>0</status>
+            <tema2_nn>Lokaler og utstyr</tema2_nn>
+        </entry>
+        <entry>
+            <tilsynsbesoektype>0</tilsynsbesoektype>
+            <poststed>FLISA</poststed>
+            <sakref>2016/97788</sakref>
+            <tilsynsobjektid>Z1309301516196303251MPWTB_Tilsynsobjekt</tilsynsobjektid>
+            <orgnummer>912302253</orgnummer>
+            <postnr>2270</postnr>
+            <dato>29042016</dato>
+            <navn>Bowlinghallen Solør</navn>
+            <tema1_no>Rutiner og ledelse</tema1_no>
+            <tema3_nn>Mat-handtering og tillaging</tema3_nn>
+            <tema1_nn>Rutiner og leiing</tema1_nn>
+            <tema3_no>Mat-håndtering og tilberedning</tema3_no>
+            <tilsynid>Z1604291603473600239HFJBF_TilsynAvtale</tilsynid>
+            <adrlinje1>INDUSTRIVEGEN 13</adrlinje1>
+            <karakter1>2</karakter1>
+            <adrlinje2/>
+            <karakter2>0</karakter2>
+            <karakter3>1</karakter3>
+            <karakter4>2</karakter4>
+            <total_karakter>2</total_karakter>
+            <tema4_no>Merking og sporbarhet</tema4_no>
+            <tema4_nn>Merking og sporbarheit</tema4_nn>
+            <tema2_no>Lokaler og utstyr</tema2_no>
+            <status>0</status>
+            <tema2_nn>Lokaler og utstyr</tema2_nn>
+        </entry>
+        <entry>
+            <tilsynsbesoektype>0</tilsynsbesoektype>
+            <poststed>TROMSØ</poststed>
+            <sakref>2016/69683</sakref>
+            <tilsynsobjektid>Z1308091240484363252FPSPC_Tilsynsobjekt</tilsynsobjektid>
+            <orgnummer>911924544</orgnummer>
+            <postnr>9008</postnr>
+            <dato>19042016</dato>
+            <navn>Risø Mat og Kaffebar</navn>
+            <tema1_no>Rutiner og ledelse</tema1_no>
+            <tema3_nn>Mat-handtering og tillaging</tema3_nn>
+            <tema1_nn>Rutiner og leiing</tema1_nn>
+            <tema3_no>Mat-håndtering og tilberedning</tema3_no>
+            <tilsynid>Z1604200940048230240VACBB_TilsynAvtale</tilsynid>
+            <adrlinje1>STRANDGATA 32</adrlinje1>
+            <karakter1>0</karakter1>
+            <adrlinje2/>
+            <karakter2>2</karakter2>
+            <karakter3>0</karakter3>
+            <karakter4>0</karakter4>
+            <total_karakter>2</total_karakter>
+            <tema4_no>Merking og sporbarhet</tema4_no>
+            <tema4_nn>Merking og sporbarheit</tema4_nn>
+            <tema2_no>Lokaler og utstyr</tema2_no>
+            <status>0</status>
+            <tema2_nn>Lokaler og utstyr</tema2_nn>
+        </entry>
+    </entries>
+</result>
