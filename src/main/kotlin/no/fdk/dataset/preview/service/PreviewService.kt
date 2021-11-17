@@ -2,6 +2,7 @@ package no.fdk.dataset.preview.service
 
 import no.fdk.dataset.preview.model.*
 import okhttp3.MediaType
+import okhttp3.ResponseBody
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.io.IOUtils
@@ -39,43 +40,50 @@ class PreviewService(
         }
     }
 
-    private fun getMaxNumberOfRows(rows: Int?): Int {
-        if(rows == null) {
-            return DEFAULT_ROWS
+    private fun getMaxNumberOfRows(rows: Int?): Int =
+        when {
+            rows == null -> DEFAULT_ROWS
+            rows > MAX_ROWS -> MAX_ROWS
+            else -> rows
         }
-        return if(rows > MAX_ROWS) MAX_ROWS else rows
-    }
+
 
     fun readAndParseResource(resourceUrl: String, rows: Int?): Preview {
         logDebug("Read and parse resource $resourceUrl")
 
         try {
             val body = downloader.download(resourceUrl)
-            if(isCsv(body.contentType())) {
-                logDebug("Parsing CSV")
-                val delimiter = detectDelimiter(body.byteStream())
-                logDebug("Detected delimiter $delimiter")
-
-                CSVFormat.DEFAULT.builder()
-                    .setDelimiter(delimiter)
-                    .build()
-                    .parse( InputStreamReader( BOMInputStream(
-                        downloader.download(resourceUrl).byteStream()),
-                        body.contentType()?.charset(Charset.forName("UTF-8"))))
-                    .use { return  Preview(table = parseCSVToTable(it, getMaxNumberOfRows(rows)), plain = null) }
-            } else if(isPlain(body.contentType())) {
-                logDebug("Fetch plain content")
-                val plain = Plain(IOUtils.toString(body.byteStream(),
-                    body.contentType()?.charset(Charset.forName("UTF-8"))),
-                    body.contentType()?.toString() ?: "")
-                return Preview(table=null, plain=plain)
+            return when {
+                isCsv(body.contentType()) -> csvPreview(resourceUrl, rows, body)
+                isPlain(body.contentType()) -> plainPreview(body)
+                else -> throw PreviewException("Invalid content type ${body.contentType().toString()}")
             }
-
-            throw PreviewException("Invalid content type ${body.contentType().toString()}")
         } catch(e: DownloadException) {
             logDebug("Unable to dowload resource $resourceUrl", e)
             throw PreviewException("Unable to dowload resource $resourceUrl")
         }
+    }
+
+    private fun csvPreview(resourceUrl: String, rows: Int?, body: ResponseBody): Preview {
+        logDebug("Parsing CSV")
+        val delimiter = detectDelimiter(body.byteStream())
+        logDebug("Detected delimiter $delimiter")
+
+        CSVFormat.DEFAULT.builder()
+            .setDelimiter(delimiter)
+            .build()
+            .parse( InputStreamReader( BOMInputStream(
+                downloader.download(resourceUrl).byteStream()),
+                body.contentType()?.charset() ?: Charset.forName("UTF-8")))
+            .use { return  Preview(table = parseCSVToTable(it, getMaxNumberOfRows(rows)), plain = null) }
+    }
+
+    private fun plainPreview(body: ResponseBody): Preview {
+        logDebug("Fetch plain content")
+        val plain = Plain(IOUtils.toString(body.byteStream(),
+            body.contentType()?.charset(Charset.forName("UTF-8"))),
+            body.contentType()?.toString() ?: "")
+        return Preview(table=null, plain=plain)
     }
 
     private fun parseCSVToTable(parser: CSVParser, maxNumberOfRows: Int): Table {
@@ -94,19 +102,22 @@ class PreviewService(
         return Table(tableHeader, tableRows)
     }
 
-    private fun isCsv(mediaType: MediaType?): Boolean {
-        if (mediaType == null) {
-            return false
+    private fun isCsv(mediaType: MediaType?): Boolean =
+        when {
+            mediaType == null -> false
+            mediaType.subtype.contains("csv") -> true
+            mediaType.subtype.contains("vnd.ms-excel") -> true
+            else -> false
         }
-        return mediaType.subtype.contains("csv") || mediaType.subtype.contains("vnd.ms-excel")
-    }
 
-    private fun isPlain(mediaType: MediaType?): Boolean {
-        if (mediaType == null) {
-            return false
+
+    private fun isPlain(mediaType: MediaType?): Boolean =
+        when {
+            mediaType == null -> false
+            mediaType.subtype.contains("xml") -> true
+            mediaType.subtype.contains("json") -> true
+            else -> false
         }
-        return mediaType.subtype.contains("xml") || mediaType.subtype.contains("json")
-    }
 
     private fun logDebug(message: String) {
         logDebug(message, null)
