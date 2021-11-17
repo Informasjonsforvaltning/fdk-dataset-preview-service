@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
@@ -59,11 +60,14 @@ class PreviewService(
                     .setDelimiter(delimiter)
                     .build()
                     .parse( InputStreamReader( BOMInputStream(
-                        downloader.download(resourceUrl).byteStream()), StandardCharsets.UTF_8))
+                        downloader.download(resourceUrl).byteStream()),
+                        body.contentType()?.charset(Charset.forName("UTF-8"))))
                     .use { return  Preview(table = parseCSVToTable(it, getMaxNumberOfRows(rows)), plain = null) }
             } else if(isPlain(body.contentType())) {
                 logDebug("Fetch plain content")
-                val plain = Plain(IOUtils.toString(body.byteStream(), StandardCharsets.UTF_8), body.contentType().toString())
+                val plain = Plain(IOUtils.toString(body.byteStream(),
+                    body.contentType()?.charset(Charset.forName("UTF-8"))),
+                    body.contentType()?.toString() ?: "")
                 return Preview(table=null, plain=plain)
             }
 
