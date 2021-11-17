@@ -19,7 +19,7 @@
                     <fieldName>shortMessage</fieldName>
                 </message>
                 <pattern>
-                    <pattern>{ "message": "%exception%message", "serviceContext": { "service": "fdk-reasoning-service" } }</pattern>
+                    <pattern>{ "message": "%exception%message", "serviceContext": { "service": "fdk-dataset-preview-service" } }</pattern>
                 </pattern>
             </providers>
         </encoder>
