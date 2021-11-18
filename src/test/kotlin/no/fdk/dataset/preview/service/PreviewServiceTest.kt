@@ -15,7 +15,7 @@ class PreviewServiceTest {
     private val previewService = PreviewService(downloader)
 
     @Test
-    fun test_if_resource_parses_as_valid_table() {
+    fun test_if_csv_resource_parses_as_valid_table() {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(
             javaClass.classLoader.getResourceAsStream("test.csv"),
@@ -33,6 +33,26 @@ class PreviewServiceTest {
         Assertions.assertEquals("Ull kg", table.header.columns[26])
         Assertions.assertEquals("981397290", table.rows[0].columns[0])
         Assertions.assertEquals("565.6", table.rows[6].columns[26])
+    }
+
+    @Test
+    fun test_if_xlsx_resource_parses_as_valid_table() {
+        val responseBody: ResponseBody = mock()
+        whenever(responseBody.byteStream()).thenReturn(
+            javaClass.classLoader.getResourceAsStream("test.xlsx"))
+        whenever(responseBody.contentType()).thenReturn(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8".toMediaTypeOrNull())
+
+        val resourceUrl = "http://domain.com/test.xlsx"
+        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+
+        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val table = preview.table!!
+
+        Assertions.assertEquals("Ansvar:", table.header.columns[0])
+        Assertions.assertEquals("2013", table.header.columns[6])
+        Assertions.assertEquals("100", table.rows[0].columns[0])
+        Assertions.assertEquals("80000", table.rows[9].columns[6])
     }
 
     @Test

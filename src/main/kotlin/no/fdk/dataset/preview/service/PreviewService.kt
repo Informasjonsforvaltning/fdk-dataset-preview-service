@@ -7,6 +7,9 @@ import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.io.IOUtils
 import org.apache.commons.io.input.BOMInputStream
+import org.apache.poi.ss.usermodel.DataFormatter
+import org.apache.poi.ss.usermodel.Workbook
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -16,6 +19,7 @@ import java.io.InputStreamReader
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
+
 
 private val LOGGER: Logger = LoggerFactory.getLogger(PreviewService::class.java)
 
@@ -54,6 +58,7 @@ class PreviewService(
         try {
             val body = downloader.download(resourceUrl)
             return when {
+                isXlsx(body.contentType()) -> xlsxPreview(rows, body)
                 isCsv(body.contentType()) -> csvPreview(resourceUrl, rows, body)
                 isPlain(body.contentType()) -> plainPreview(body)
                 else -> throw PreviewException("Invalid content type ${body.contentType().toString()}")
@@ -62,6 +67,46 @@ class PreviewService(
             logDebug("Unable to dowload resource $resourceUrl", e)
             throw PreviewException("Unable to dowload resource $resourceUrl")
         }
+    }
+
+    private fun xlsxPreview(rows: Int?, body: ResponseBody): Preview {
+        logDebug("Parsing Excel")
+
+        val tableRows = arrayListOf<TableRow>()
+
+        val workbook: Workbook = XSSFWorkbook(body.byteStream())
+        val formatter = DataFormatter()
+        val sheet = workbook.getSheetAt(0)
+
+        var lastCellNum = 0
+        sheet.forEach { row ->
+            val tableRow = TableRow(row.map {
+                formatter.formatCellValue(it)
+            })
+
+            tableRows.add(tableRow)
+
+            lastCellNum = when {
+                row.lastCellNum <= lastCellNum -> lastCellNum
+                formatter.formatCellValue(row.last()).isNotEmpty() -> row.physicalNumberOfCells
+                else -> lastCellNum
+            }
+        }
+
+        val headerIndex = tableRows.indexOfFirst {
+            it.columns.size == lastCellNum && it.columns[lastCellNum-1].isNotEmpty()
+        }
+        val startHeaderIndex = if (headerIndex == -1) 0 else headerIndex
+        val endHeaderIndex = startHeaderIndex + 1
+        val endRowsIndex =
+            if (endHeaderIndex + getMaxNumberOfRows(rows) <= tableRows.size - 1) endHeaderIndex + getMaxNumberOfRows(rows)
+            else tableRows.size - 1
+
+        val header = TableHeader(tableRows.subList(startHeaderIndex, endHeaderIndex)[0].columns)
+        header.beautify()
+
+        val table = Table(header, tableRows.subList(endHeaderIndex, endRowsIndex))
+        return Preview(table=table, plain = null)
     }
 
     private fun csvPreview(resourceUrl: String, rows: Int?, body: ResponseBody): Preview {
@@ -102,11 +147,18 @@ class PreviewService(
         return Table(tableHeader, tableRows)
     }
 
+    private fun isXlsx(mediaType: MediaType?): Boolean =
+        when {
+            mediaType == null -> false
+            mediaType.subtype == "vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> true
+            else -> false
+        }
+
     private fun isCsv(mediaType: MediaType?): Boolean =
         when {
             mediaType == null -> false
-            mediaType.subtype.contains("csv") -> true
-            mediaType.subtype.contains("vnd.ms-excel") -> true
+            mediaType.subtype == "csv" -> true
+            mediaType.subtype == "vnd.ms-excel" -> true
             else -> false
         }
 
@@ -114,8 +166,8 @@ class PreviewService(
     private fun isPlain(mediaType: MediaType?): Boolean =
         when {
             mediaType == null -> false
-            mediaType.subtype.contains("xml") -> true
-            mediaType.subtype.contains("json") -> true
+            mediaType.subtype.matches("\\+?xml".toRegex()) -> true
+            mediaType.subtype.matches("\\+?json".toRegex()) -> true
             else -> false
         }
 
