@@ -33,10 +33,9 @@ class FileDownloader {
                 responseCode < HttpURLConnection.HTTP_MULT_CHOICE &&
                 body != null
             ) {
-
                 return body
             } else {
-                throw DownloadException("Error occurred when do http get $url")
+                throw DownloadException("Error occurred when do http get $url (status $responseCode)")
             }
         } catch(e: Exception) {
             throw DownloadException(e.message)
