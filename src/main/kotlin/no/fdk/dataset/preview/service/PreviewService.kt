@@ -157,17 +157,16 @@ class PreviewService(
     private fun isCsv(mediaType: MediaType?): Boolean =
         when {
             mediaType == null -> false
-            mediaType.subtype == "csv" -> true
-            mediaType.subtype == "vnd.ms-excel" -> true
+            "csv".toRegex().containsMatchIn(mediaType.subtype) -> true
+            """vnd\.ms-excel""".toRegex().containsMatchIn(mediaType.subtype) -> true
             else -> false
         }
-
 
     private fun isPlain(mediaType: MediaType?): Boolean =
         when {
             mediaType == null -> false
-            mediaType.subtype.matches("\\+?xml".toRegex()) -> true
-            mediaType.subtype.matches("\\+?json".toRegex()) -> true
+            """\+?xml""".toRegex().containsMatchIn(mediaType.subtype) -> true
+            """\+?json""".toRegex().containsMatchIn(mediaType.subtype) -> true
             else -> false
         }
 
