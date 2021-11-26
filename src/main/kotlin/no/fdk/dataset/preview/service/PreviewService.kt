@@ -71,6 +71,7 @@ class PreviewService(
 
         CSVFormat.DEFAULT.builder()
             .setDelimiter(delimiter)
+            .setEscape('\\')
             .build()
             .parse( InputStreamReader( BOMInputStream(
                 downloader.download(resourceUrl).byteStream()),
