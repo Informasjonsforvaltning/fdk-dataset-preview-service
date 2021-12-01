@@ -3,6 +3,7 @@ package no.fdk.dataset.preview.security
 import no.fdk.dataset.preview.ApplicationSettings
 import org.apache.logging.log4j.util.Strings
 import org.springframework.context.annotation.Bean
+import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -34,7 +35,10 @@ open class SecurityConfiguration(
             .csrf().disable()
             .sessionManagement()
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and().addFilter(filter).authorizeRequests().anyRequest().authenticated()
+            .and().addFilter(filter).authorizeRequests()
+            .antMatchers(HttpMethod.GET, "/ping").permitAll()
+            .antMatchers(HttpMethod.GET, "/ready").permitAll()
+            .anyRequest().authenticated()
     }
 
     @Bean
