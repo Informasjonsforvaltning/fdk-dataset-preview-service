@@ -1,3 +1,6 @@
+application:
+  api-key: ${API_KEY:}
+
 logging:
   level.root: WARN
   level.no: ${LOG_LEVEL:DEBUG}
