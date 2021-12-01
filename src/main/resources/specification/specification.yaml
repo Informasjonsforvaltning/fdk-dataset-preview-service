@@ -1,8 +1,8 @@
 openapi: 3.0.2
 info:
-  description: Tilgjengeliggjør begreper fra Begrepskatalog
-  version: '2.0.0'
-  title: Begrepskatalog API
+  description: Tilgjengeliggjør forhåndsvisning av online resurser
+  version: '1.0.0'
+  title: Dataset Preview API
   contact:
     name: Digitaliseringsdirektoratet
     url: 'https://fellesdatakatalog.digdir.no'
@@ -10,515 +10,88 @@ info:
   license:
     name: License of API
     url: 'http://data.norge.no/nlod/no/2.0'
-tags:
-  - name: begrepskatalog
-    description: Begrepskatalog API
-  - name: skos-ap-no
-    description: SKOS-AP-NO API
 servers:
-  - url: 'https://concept-catalog.fellesdatakatalog.digdir.no'
+  - url: 'https://data.norge.no/dataset/preview'
     description: Produksjonsversjon av API server
 paths:
-  /begreper:
+  /preview:
     post:
-      tags:
-        - begrepskatalog
-      description: opprette nytt begrep
-      operationId: createBegrep
+      description: Hent preview av online resurs
+      operationId: preview
       responses:
-        '201':
-          description: Created
-          headers:
-            Location:
-              schema:
-                type: string
-              description: url til det nye begrepet
-        '409':
-          description: Ulovlig verdier i begrep
+        '200':
+          description: Ok
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Feilmelding"
+                $ref: '#/components/schemas/Preview'
+        '400':
+          description: Ugyldig forespørsel
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Begrep'
-    get:
-      tags:
-        - begrepskatalog
-      description: Returnerer en samling begreper for en gitt virksomhet
-      operationId: getBegrep
-      parameters:
-        - in: query
-          name: orgNummer
-          description: Virksomhetens organisasjonsnummer
-          required: true
-          schema:
-            type: string
-        - in: query
-          name: status
-          description: begrepets status
-          required: false
-          schema:
-            $ref: "#/components/schemas/Status"
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Begrep'
-  /begreper/{id}:
-    get:
-      tags:
-        - begrepskatalog
-      description: Hent et spesifikt begrep
-      operationId: getBegrepById
-      parameters:
-        - name: id
-          in: path
-          description: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Begrep"
-    patch:
-      tags:
-        - begrepskatalog
-      description: Oppdatere detaljer på et begrep
-      operationId: setBegrepById
-      parameters:
-        - name: id
-          in: path
-          description: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Begrep"
-        '409':
-          description: Ulovlig verdier i begrep
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Feilmelding"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/JsonPatch'
-    delete:
-      tags:
-        - begrepskatalog
-      description: slette et begrep
-      operationId: deleteBegrepById
-      parameters:
-        - name: id
-          in: path
-          description: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: No Content
-  /begreper/{id}/revisjon:
-    post:
-      tags:
-        - begrepskatalog
-      description: oppretter en revisjon av et publisert begrep
-      operationId: createRevision
-      parameters:
-        - name: id
-          in: path
-          description: id for tidligere publisert begrep
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Begrep'
-      responses:
-        '201':
-          description: Created
-          headers:
-            Location:
-              schema:
-                type: string
-              description: url til det nye begrepet
-  /begreper/import:
-    post:
-      tags:
-        - begrepskatalog
-      description: opprette nytt begrep
-      operationId: createBegreper
-      responses:
-        '201':
-          description: Created
-          headers:
-            Count:
-              schema:
-                type: string
-              description: antall begreper lagt til
-        '409':
-          description: Ulovlig verdier i begrep
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Feilmelding"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/Begrep"
-  /begreper/search:
-    post:
-      tags:
-        - begrepskatalog
-      description: søk i begrepstermer
-      operationId: searchBegrep
-      parameters:
-        - in: query
-          name: orgNummer
-          description: Virksomhetens organisasjonsnummer
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Begrep'
-        '409':
-          description: Ulovlig verdier i søk
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Feilmelding"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/JsonSearchOperation'
-  /collections:
-    get:
-      tags:
-        - skos-ap-no
-      description: Returnerer samlinger av begreper
-      operationId: getAllCollections
-      responses:
-        '200':
-          description: OK
-          content:
-            text/turtle:
-              schema:
-                type: string
-  /collections/{id}:
-    get:
-      tags:
-        - skos-ap-no
-      description: Returnerer en samling av begreper
-      operationId: getCollectionById
-      parameters:
-        - name: id
-          in: path
-          description: Ansvarlig virksomhet sitt organisasjonsnummer
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            text/turtle:
-              schema:
-                type: string
-  /collections/{collectionId}/concepts/{id}:
-    get:
-      tags:
-        - skos-ap-no
-      description: Returnerer en samling av begreper
-      operationId: getConceptById
-      parameters:
-        - name: collectionId
-          in: path
-          description: Ansvarlig virksomhet sitt organisasjonsnummer
-          required: true
-          schema:
-            type: string
-        - name: id
-          in: path
-          description: Begrepets id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            text/turtle:
-              schema:
-                type: string
+              $ref: '#/components/schemas/PreviewRequest'
+
 
 components:
   schemas:
-    Begrep:
+    PreviewRequest:
       type: object
-      description: Et begrep
+      description: Preview forespørsel
       required:
-        - ansvarligVirksomhet
+        - url
+        - rows
       properties:
-        id:
-          type: string
-          description: system-generert id (GUID)
-        originaltBegrep:
-          type: string
-          description: id for the original concept (GUID)
-        revisjonAv:
-          type: string
-          description: id for the concept this is a revision of (GUID)
-        versjonsnr:
-          $ref: "#/components/schemas/SemVer"
-        erSistPublisert:
-          type: boolean
-          description: shows if the concept is the highest published version
-        revisjonAvSistPublisert:
-          type: boolean
-          description: shows if the concept is a revision of the highest published version
-        status:
-          $ref: "#/components/schemas/Status"
-        anbefaltTerm:
-          $ref : "#/components/schemas/Term"
-        tillattTerm:
-          $ref: "#/components/schemas/TekstMedSpraakKode"
-        frarådetTerm:
-          $ref: "#/components/schemas/TekstMedSpraakKode"
-        definisjon:
-          $ref: "#/components/schemas/Definisjon"
-        kildebeskrivelse:
-          $ref: "#/components/schemas/Kildebeskrivelse"
-        merknad:
-          $ref: '#/components/schemas/TekstMedSpraakKode'
-        ansvarligVirksomhet:
-          allOf:
-            - $ref: "#/components/schemas/Virksomhet"
-          nullable: false
-        eksempel:
-          $ref: '#/components/schemas/TekstMedSpraakKode'
-        fagområde:
-          $ref: '#/components/schemas/TekstMedSpraakKode'
-        bruksområde:
-          $ref: '#/components/schemas/TekstMedSpraakKode'
-        omfang:
-          $ref: "#/components/schemas/URITekst"
-        kontaktpunkt:
-          $ref: "#/components/schemas/Kontaktpunkt"
-        gyldigFom:
-          type: string
-          format: date
-          nullable: true
-        gyldigTom:
-          type: string
-          format: date
-          nullable: true
-        endringslogelement:
-          $ref: "#/components/schemas/Endringslogelement"
-        seOgså:
-          type: array
-          items:
-            type: string
-    Kildebeskrivelse:
-      type: object
-      required:
-        - forholdTilKilde
-      properties:
-        forholdTilKilde:
-          type: string
-          nullable: false
-          enum:
-            - egendefinert
-            - basertPaaKilde
-            - sitatFraKilde
-        kilde:
-          description: er kun relevant dersom typeKilde
-          type: array
-          items:
-            $ref: "#/components/schemas/URITekst"
-    URITekst:
-      type: object
-      properties:
-        uri:
+        url:
           type: string
           format: uri
           pattern: "^https?://"
-        tekst:
-          type: string
-    Kontaktpunkt:
-      type: object
-      description: kontaktpunktet for dette begrepet
-      properties:
-        harEpost:
-          type: string
-          format: email
-          description: e-post adressen til kontaktpunkt
-        harTelefon:
-          type: string
-          description: telefonnummer til kontaktpunkt
-    Virksomhet:
-      type: object
-      description: Ansvarlig virksomhet for begrepet [dct:publisher]
-      required:
-        - id
-      properties:
-        uri:
-          type: string
-          format: uri
-          description: Lenke til the virksomhet i Brønnøysundregistrene
-        id:
-          type: string
-          description: organisasjonsnummer
-          nullable: false
-        navn:
-          type: string
-          description: Navnet til virksomheten slik den er oppgitt i Brønnøysundregistrene
-        orgPath:
-          type: string
-        prefLabel:
-          type: string
-    Status:
-      type: string
-      enum:
-        - utkast
-        - godkjent
-        - høring
-        - publisert
-    Feilmelding:
-      type: object
-      required:
-        - melding
-      properties:
-        melding:
-          type: string
-          nullable: false
-    SemVer:
-      type: object
-      required:
-        - major
-        - minor
-        - patch
-      properties:
-        major:
+          description: url til online resurs
+        rows:
           type: integer
-          nullable: false
-        minor:
-          type: integer
-          nullable: false
-        patch:
-          type: integer
-          nullable: false
-    Endringslogelement:
+          description: antall rader som skal lastes
+    Preview:
       type: object
-      required:
-        - brukerId
-        - endringstidspunkt
+      description: Preview
       properties:
-        brukerId:
+        table:
+          $ref: '#/components/schemas/Table'
+        plain:
           type: string
-          nullable: false
-        endringstidspunkt:
-          type: string
-          format: date-time
-          nullable: false
-    JsonPatch:
-      description: 'A JSON Schema describing a JSON Patch (https://tools.ietf.org/html/rfc6902)'
-      type: array
-      items:
-        $ref: '#/components/schemas/JsonPatchOperation'
-    JsonPatchOperation:
+          description: plain tekst
+    Table:
       type: object
-      description: 'A JSON patch document as defined by RFC 6902'
-      required:
-        - op
-        - path
+      description: Table
       properties:
-        op:
-          type: string
-          nullable: false
-          description: 'The operation to be performed'
-          enum:
-            - add
-            - remove
-            - replace
-            - move
-            - copy
-            - test
-        path:
-          type: string
-          nullable: false
-          description: 'A JSON pointer to the property being affected'
-        value:
-          type: object
-          description: 'The value to add, replace or test.'
-        from:
-          description: 'A JSON Pointer path pointing to the location to move/copy from.'
-          type: string
-    Definisjon:
+        header:
+          $ref: '#/components/schemas/TableHeader'
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/TableRow'
+    TableHeader:
       type: object
-      description: The definition [skosno:Definisjon] in differerent languages
+      description: Table header
       properties:
-        tekst:
-          $ref: '#/components/schemas/TekstMedSpraakKode'
-    Term:
+        columns:
+          type: array
+          items:
+            type: string
+    TableRow:
       type: object
-      description: The term [skosno:Definisjon] in differerent languages
+      description: Table row
       properties:
-        navn:
-          $ref: '#/components/schemas/TekstMedSpraakKode'
-    TekstMedSpraakKode:
-      description: A generic object to hold multilanguage texts, that has language code (according to ISO 639-1) as keys
-      type: object
-      additionalProperties: {}
-    JsonSearchOperation:
-      type: object
-      description: 'A JSON document containing the desired query string'
-      required:
-        - query
-      properties:
-        query:
-          type: string
-          nullable: false
-          description: 'The query string to search for'
+        columns:
+          type: array
+          items:
+            type: string
+
   securitySchemes:
-    bearerAuth:            # arbitrary name for the security scheme
-      type: http
-      scheme: bearer
-      bearerFormat: JWT    # optional, arbitrary value for documentation purposes
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-KEY
 security:
-  - bearerAuth: []
+  - apiKey: []
