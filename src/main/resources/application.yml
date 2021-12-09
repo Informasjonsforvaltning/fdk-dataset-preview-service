@@ -3,7 +3,7 @@ application:
 
 logging:
   level.root: WARN
-  level.no: ${LOG_LEVEL:DEBUG}
+  level.no.fdk: ${LOG_LEVEL:INFO}
   level.org.springframework: WARN
   level.org.springframework.web: WARN
   level.org.apache.jena: ERROR
