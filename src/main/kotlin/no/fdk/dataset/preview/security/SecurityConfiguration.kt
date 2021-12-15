@@ -1,7 +1,6 @@
 package no.fdk.dataset.preview.security
 
 import no.fdk.dataset.preview.ApplicationSettings
-import org.apache.logging.log4j.util.Strings
 import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.BadCredentialsException
@@ -23,7 +22,7 @@ open class SecurityConfiguration(
         val filter = APIKeyAuthFilter("X-API-KEY")
         filter.setAuthenticationManager { authentication ->
             val principal = authentication.principal as String
-            if (Strings.isBlank(principal) || applicationSettings.apiKey != principal
+            if (principal.isBlank() || applicationSettings.apiKey != principal
             ) {
                 throw BadCredentialsException("The API key was not found or not the expected value.")
             }
