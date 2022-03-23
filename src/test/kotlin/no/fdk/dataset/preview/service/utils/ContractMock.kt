@@ -8,13 +8,37 @@ private val mockserver = WireMockServer(5000)
 
 fun startMockServer() {
     if(!mockserver.isRunning) {
-        mockserver.stubFor(get(urlEqualTo("/download"))
+        mockserver.stubFor(get(urlEqualTo("/download/csv"))
                 .willReturn(aResponse()
                     .withStatus(200)
                     .withHeader("Content-Type", "text/csv")
                     .withBody(ObjectFactory::class.java.classLoader
                         .getResourceAsStream("test.csv")?.readAllBytes())
                 )
+        )
+        mockserver.stubFor(get(urlEqualTo("/download/csv-zip"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/zip")
+                .withBody(ObjectFactory::class.java.classLoader
+                    .getResourceAsStream("test.csv.zip")?.readAllBytes())
+            )
+        )
+        mockserver.stubFor(get(urlEqualTo("/download/xlsx-zip"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/zip")
+                .withBody(ObjectFactory::class.java.classLoader
+                    .getResourceAsStream("test.xlsx.zip")?.readAllBytes())
+            )
+        )
+        mockserver.stubFor(get(urlEqualTo("/download/json-zip"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/zip")
+                .withBody(ObjectFactory::class.java.classLoader
+                    .getResourceAsStream("test.json.zip")?.readAllBytes())
+            )
         )
         mockserver.start()
     }
