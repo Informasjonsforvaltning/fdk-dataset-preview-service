@@ -36,6 +36,27 @@ class PreviewServiceTest {
     }
 
     @Test
+    fun test_if_zip_resource_parses_as_valid_table() {
+        val responseBody: ResponseBody = mock()
+        whenever(responseBody.byteStream()).thenReturn(
+            javaClass.classLoader.getResourceAsStream("test.csv.zip"),
+            javaClass.classLoader.getResourceAsStream("test.csv.zip"))
+        whenever(responseBody.contentType()).thenReturn(
+            "application/zip".toMediaTypeOrNull())
+
+        val resourceUrl = "http://domain.com/test.csv.zip"
+        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+
+        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val table = preview.table!!
+
+        Assertions.assertEquals("Orgnr", table.header.columns[0])
+        Assertions.assertEquals("Ull kg", table.header.columns[26])
+        Assertions.assertEquals("981397290", table.rows[0].columns[0])
+        Assertions.assertEquals("565.6", table.rows[6].columns[26])
+    }
+
+    @Test
     fun test_if_msexcel_with_additional_chars_in_contenttype_resource_parses_as_valid_table() {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(
