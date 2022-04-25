@@ -15,7 +15,7 @@ jobs:
       caller_sha: ${{ github.sha }}
       repo: ${{ github.repository }}
       actor: ${{ github.actor }}
-      java_version: '15'
+      java_version: '17'
       environment: prod
       cluster: digdir-fdk-prod
     secrets:
