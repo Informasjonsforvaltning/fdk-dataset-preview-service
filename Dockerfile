@@ -1,11 +1,11 @@
-FROM maven:3-openjdk-15-slim AS build
+FROM maven:3-openjdk-17-slim AS build
 WORKDIR /app
 COPY pom.xml ./
 COPY src ./src
 RUN mvn clean package --no-transfer-progress -DskipTests
 RUN mvn versions:display-dependency-updates --no-transfer-progress
 
-FROM openjdk:15-slim
+FROM openjdk:17-slim
 ENV TZ=Europe/Oslo
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 WORKDIR /app
