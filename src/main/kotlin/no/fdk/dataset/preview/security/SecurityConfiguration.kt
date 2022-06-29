@@ -7,8 +7,8 @@ import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -16,9 +16,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(securedEnabled = true)
 open class SecurityConfiguration(
-    private val applicationSettings: ApplicationSettings) : WebSecurityConfigurerAdapter() {
+    private val applicationSettings: ApplicationSettings) {
 
-    override fun configure(http: HttpSecurity) {
+    @Bean
+    open fun filterChain(http: HttpSecurity): SecurityFilterChain {
         val filter = APIKeyAuthFilter("X-API-KEY")
         filter.setAuthenticationManager { authentication ->
             val principal = authentication.principal as String
@@ -34,10 +35,13 @@ open class SecurityConfiguration(
             .csrf().disable()
             .sessionManagement()
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and().addFilter(filter).authorizeRequests()
-            .antMatchers(HttpMethod.GET, "/ping").permitAll()
-            .antMatchers(HttpMethod.GET, "/ready").permitAll()
-            .anyRequest().authenticated()
+            .and().addFilter(filter)
+            .authorizeRequests{ authorize ->
+                authorize.antMatchers(HttpMethod.GET, "/ping").permitAll()
+                    .antMatchers(HttpMethod.GET, "/ready").permitAll()
+                    .anyRequest().authenticated()
+            }
+        return http.build()
     }
 
     @Bean
