@@ -8,6 +8,8 @@ to render as table.
 
 ## Env vars
 `API_KEY` - API KEY used to access the endpoint
+`ALLOWED_ORIGINS` - ALLOWED_ORIGINS used to configure cors settings
 
 ## Security
 Add the `X-API-KEY` header to your requests and use the value configured for `API_KEY`.
+Add the `X-XSRF-TOKEN` header to your requests and use the cookie value of `DATASET-PREVIEW-CSRF-TOKEN`.

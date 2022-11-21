@@ -5,4 +5,4 @@ import org.springframework.boot.context.properties.ConstructorBinding
 
 @ConstructorBinding
 @ConfigurationProperties("application")
-data class ApplicationSettings(val apiKey: String)
+data class ApplicationSettings(val apiKey: String, val allowedOrigins: String)

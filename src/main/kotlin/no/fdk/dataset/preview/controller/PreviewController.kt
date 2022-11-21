@@ -8,11 +8,18 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@CrossOrigin
 @RequestMapping("/preview")
 class PreviewController(
     private val previewService: PreviewService
 ) {
+    @GetMapping()
+    fun preview(): ResponseEntity<Any> {
+        return try {
+            ResponseEntity.ok().build()
+        } catch(e: PreviewException) {
+            ResponseEntity<Any>(e.message, HttpStatus.BAD_REQUEST)
+        }
+    }
     @PostMapping(consumes = ["application/json"])
     fun preview(@RequestBody previewRequest: PreviewRequest): ResponseEntity<Any> {
         return try {

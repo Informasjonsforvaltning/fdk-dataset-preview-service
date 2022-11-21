@@ -1,5 +1,6 @@
 application:
   api-key: ${API_KEY:}
+  allowedOrigins: ${ALLOWED_ORIGINS:}
 
 logging:
   level.root: WARN
