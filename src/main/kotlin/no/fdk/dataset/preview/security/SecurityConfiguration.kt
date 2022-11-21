@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -31,8 +32,13 @@ open class SecurityConfiguration(
             authentication
         }
 
+        val csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse()
+        csrfRepository.setCookieName("DATASET-PREVIEW-CSRF-TOKEN")
+
         http.cors().and()
-            .csrf().disable()
+            .csrf()
+            .csrfTokenRepository(csrfRepository)
+            .and()
             .sessionManagement()
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and().addFilter(filter)
@@ -45,9 +51,15 @@ open class SecurityConfiguration(
     }
 
     @Bean
-    open fun corsConfigurationSource(): CorsConfigurationSource {
+    open fun corsConfigurationSource(): CorsConfigurationSource? {
+        val configuration = CorsConfiguration()
+        configuration.allowedOrigins = applicationSettings.allowedOrigins.split(",")
+        configuration.allowedMethods = listOf("GET", "POST", "OPTIONS")
+        configuration.allowCredentials = true
+        configuration.allowedHeaders = listOf("X-API-KEY", "X-XSRF-TOKEN", "Content-Type")
+        configuration.maxAge = 3600L
         val source = UrlBasedCorsConfigurationSource()
-        source.registerCorsConfiguration("/**", CorsConfiguration().applyPermitDefaultValues())
+        source.registerCorsConfiguration("/**", configuration)
         return source
     }
 }
