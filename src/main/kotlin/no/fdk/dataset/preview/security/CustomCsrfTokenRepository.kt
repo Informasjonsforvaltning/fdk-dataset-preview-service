@@ -4,6 +4,8 @@
 //
 package no.fdk.dataset.preview.security
 
+import no.fdk.dataset.preview.util.UrlUtil
+import no.fdk.dataset.preview.util.UrlUtil.Companion.getDomainName
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.security.web.csrf.CsrfToken
@@ -21,7 +23,8 @@ class CustomCsrfTokenRepository : CsrfTokenRepository {
     private var headerName = "X-XSRF-TOKEN"
     private var cookieName = "DATASET-PREVIEW-CSRF-TOKEN"
     private var cookieHttpOnly = true
-    var cookiePath: String? = null
+    private var cookiePath: String? = null
+    private var allowedOrigins: List<String>? = null
     private var secure: Boolean? = null
     private var cookieMaxAge = -1L
     override fun generateToken(request: HttpServletRequest): CsrfToken {
@@ -31,16 +34,20 @@ class CustomCsrfTokenRepository : CsrfTokenRepository {
     override fun saveToken(token: CsrfToken?, request: HttpServletRequest, response: HttpServletResponse) {
         val tokenValue = if (token != null) token.token else ""
 
-        val responseCookie = ResponseCookie
+        var responseCookieBuilder = ResponseCookie
             .from(cookieName, tokenValue)
             .secure((if (secure != null) secure else request.isSecure)!!)
             .httpOnly(cookieHttpOnly)
             .path(if (StringUtils.hasLength(cookiePath)) cookiePath else getRequestContext(request))
             .maxAge(if (token != null) cookieMaxAge else 0L)
             .sameSite("None")
-            .build()
 
-        response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString())
+        val domain = getDomainName(request.getHeader("referer"))
+        if (allowedOrigins != null && allowedOrigins!!.any { getDomainName(it) == domain }) {
+            responseCookieBuilder = responseCookieBuilder.domain(domain)
+        }
+
+        response.addHeader(HttpHeaders.SET_COOKIE, responseCookieBuilder.build().toString())
     }
 
     override fun loadToken(request: HttpServletRequest): CsrfToken? {
@@ -91,6 +98,10 @@ class CustomCsrfTokenRepository : CsrfTokenRepository {
     fun setCookieMaxAge(cookieMaxAge: Long) {
         Assert.isTrue(cookieMaxAge != 0L, "cookieMaxAge cannot be zero")
         this.cookieMaxAge = cookieMaxAge
+    }
+
+    fun setAllowedOrigins(allowedOrigins: List<String>) {
+        this.allowedOrigins = allowedOrigins
     }
 
     companion object {

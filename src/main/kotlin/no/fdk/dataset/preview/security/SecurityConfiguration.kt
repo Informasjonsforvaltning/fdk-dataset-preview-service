@@ -1,6 +1,7 @@
 package no.fdk.dataset.preview.security
 
 import no.fdk.dataset.preview.ApplicationSettings
+import no.fdk.dataset.preview.util.UrlUtil
 import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.BadCredentialsException
@@ -31,9 +32,12 @@ open class SecurityConfiguration(
             authentication
         }
 
+        val csrfRepository = CustomCsrfTokenRepository.withHttpOnlyFalse()
+        csrfRepository.setAllowedOrigins(applicationSettings.allowedOrigins.split(","))
+
         http.cors().and()
             .csrf()
-            .csrfTokenRepository(CustomCsrfTokenRepository.withHttpOnlyFalse())
+            .csrfTokenRepository(csrfRepository)
             .and()
             .sessionManagement()
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
