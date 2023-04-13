@@ -11,39 +11,15 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
 
-fun apiGet(port: Int, endpoint: String, acceptHeader: MediaType): Map<String, Any> {
+private fun apiGetCSRF(url: String, token: String? = null): Pair<Int, String?> {
+    val connection = URL(url).openConnection() as HttpURLConnection
+    token?.let { connection.setRequestProperty("X-API-KEY", it) }
+    connection.setRequestProperty("X-XSRF-TOKEN", "DATASET-PREVIEW-CSRF-TOKEN")
+    connection.setRequestProperty("referer", url)
+    connection.connect()
 
-    return try {
-        val connection = URL("http://localhost:$port$endpoint").openConnection() as HttpURLConnection
-        connection.setRequestProperty("Accept", acceptHeader.toString())
-        connection.connect()
-
-        if (isOK(connection.responseCode)) {
-            val responseBody = connection.inputStream.bufferedReader().use(BufferedReader::readText)
-            mapOf(
-                "body" to responseBody,
-                "header" to connection.headerFields.toString(),
-                "status" to connection.responseCode
-            )
-        } else {
-            mapOf(
-                "status" to connection.responseCode,
-                "header" to " ",
-                "body" to " "
-            )
-        }
-    } catch (e: Exception) {
-        mapOf(
-            "status" to e.toString(),
-            "header" to " ",
-            "body" to " "
-        )
-    }
+    return Pair(connection.responseCode, connection.headerFields["Set-Cookie"]?.get(0)?.split(";")?.get(0))
 }
-
-private fun isOK(response: Int?): Boolean =
-    if (response == null) false
-    else HttpStatus.resolve(response)?.is2xxSuccessful == true
 
 fun authorizedRequest(
     path: String,
@@ -56,8 +32,16 @@ fun authorizedRequest(
     val request = RestTemplate()
     request.requestFactory = HttpComponentsClientHttpRequestFactory()
     val url = "http://localhost:$port$path"
+
+    val csrfResponse = apiGetCSRF(url, token)
+    if (csrfResponse.first != 200) {
+        return mapOf("status" to csrfResponse.first, "header" to " ", "body" to " ")
+    }
+
     val headers = HttpHeaders()
     headers.accept = listOf(accept)
+    headers.set("Cookie", csrfResponse.second)
+    headers.set("X-XSRF-TOKEN", csrfResponse.second?.split("=")?.get(1))
     token?.let { headers.set("X-API-KEY", it) }
     headers.contentType = MediaType.APPLICATION_JSON
     val entity: HttpEntity<String> = HttpEntity(body, headers)

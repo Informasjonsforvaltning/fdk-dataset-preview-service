@@ -21,13 +21,12 @@ private val mapper = jacksonObjectMapper()
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @SpringBootTest(
     properties = [
-        "spring.profiles.active=contract-test",
-        "application.apiKey=my-api-key",
+        "spring.profiles.active=integration-test",
         "logging.level.no.fdk=DEBUG"],
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
 )
 @ContextConfiguration(initializers = [ApiTestContext.Initializer::class])
-@Tag("contract")
+@Tag("integration")
 class PreviewContractTest : ApiTestContext() {
 
     @Test
