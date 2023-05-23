@@ -4,12 +4,10 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.fdk.dataset.preview.model.Preview
 import no.fdk.dataset.preview.model.PreviewRequest
 import no.fdk.dataset.preview.service.utils.ApiTestContext
+import no.fdk.dataset.preview.service.utils.CsrfTestException
 import no.fdk.dataset.preview.service.utils.authorizedRequest
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
@@ -31,11 +29,11 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun `Unauthorized when api token is not included`() {
-        val previewRequest = PreviewRequest("http://localhost:5000/download", 5)
-        val rsp = authorizedRequest("/preview", port, mapper.writeValueAsString(previewRequest),
-            null, HttpMethod.POST)
-
-        assertEquals(HttpStatus.FORBIDDEN.value(), rsp["status"])
+        assertThrows<CsrfTestException> {
+            val previewRequest = PreviewRequest("http://localhost:5000/download", 5)
+            val rsp = authorizedRequest("/preview", port, mapper.writeValueAsString(previewRequest),
+                null, HttpMethod.POST)
+        }
     }
 
     @Test

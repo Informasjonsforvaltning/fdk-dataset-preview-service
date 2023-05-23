@@ -1,6 +1,10 @@
 package no.fdk.dataset.preview.service.utils
 
-import org.springframework.http.*
+import com.fasterxml.jackson.databind.ObjectMapper
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
@@ -11,14 +15,29 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
 
-private fun apiGetCSRF(url: String, token: String? = null): Pair<Int, String?> {
+class CsrfTestException(message: String) : Exception(message)
+
+private fun apiGetCSRF(url: String, token: String? = null): Pair<String, String?> {
     val connection = URL(url).openConnection() as HttpURLConnection
     token?.let { connection.setRequestProperty("X-API-KEY", it) }
-    connection.setRequestProperty("X-XSRF-TOKEN", "DATASET-PREVIEW-CSRF-TOKEN")
-    connection.setRequestProperty("referer", url)
     connection.connect()
 
-    return Pair(connection.responseCode, connection.headerFields["Set-Cookie"]?.get(0)?.split(";")?.get(0))
+    if(connection.responseCode != 200) {
+        throw CsrfTestException("Unable to fetch CSRF token")
+    }
+
+    val br: BufferedReader = BufferedReader(InputStreamReader(connection.getInputStream()))
+    val sb = StringBuilder()
+    var output: String?
+    while (br!!.readLine().also { output = it } != null) {
+        sb.append(output)
+    }
+    val csrfTokenJson = ObjectMapper().readTree(sb.toString())
+    val csrfTokenJsonToken = csrfTokenJson["token"].asText()
+
+    val setCookieValue = connection.headerFields["Set-Cookie"]
+    val csrfToken = setCookieValue?.find { s -> s.startsWith("DATASET-PREVIEW-CSRF-TOKEN")}
+    return Pair(csrfTokenJsonToken, csrfToken?.split(";")?.get(0))
 }
 
 fun authorizedRequest(
@@ -31,23 +50,19 @@ fun authorizedRequest(
 ): Map<String, Any> {
     val request = RestTemplate()
     request.requestFactory = HttpComponentsClientHttpRequestFactory()
-    val url = "http://localhost:$port$path"
 
-    val csrfResponse = apiGetCSRF(url, token)
-    if (csrfResponse.first != 200) {
-        return mapOf("status" to csrfResponse.first, "header" to " ", "body" to " ")
-    }
+    val csrfResponse = apiGetCSRF("http://localhost:$port/csrf", token)
 
     val headers = HttpHeaders()
     headers.accept = listOf(accept)
     headers.set("Cookie", csrfResponse.second)
-    headers.set("X-XSRF-TOKEN", csrfResponse.second?.split("=")?.get(1))
+    headers.set("X-XSRF-TOKEN", csrfResponse.first)
     token?.let { headers.set("X-API-KEY", it) }
     headers.contentType = MediaType.APPLICATION_JSON
     val entity: HttpEntity<String> = HttpEntity(body, headers)
 
     return try {
-        val response = request.exchange(url, httpMethod, entity, String::class.java)
+        val response = request.exchange("http://localhost:$port$path", httpMethod, entity, String::class.java)
         mapOf(
             "body" to response.body,
             "header" to response.headers.toString(),

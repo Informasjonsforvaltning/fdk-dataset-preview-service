@@ -1,21 +1,21 @@
 package no.fdk.dataset.preview.security
 
 import no.fdk.dataset.preview.ApplicationSettings
-import no.fdk.dataset.preview.util.UrlUtil
 import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.BadCredentialsException
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import org.springframework.security.config.annotation.web.invoke
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter
+import org.springframework.security.web.util.matcher.RequestMatcher
 
-@EnableWebSecurity
-@EnableGlobalMethodSecurity(securedEnabled = true)
+@Configuration
 open class SecurityConfiguration(
     private val applicationSettings: ApplicationSettings) {
 
@@ -32,21 +32,29 @@ open class SecurityConfiguration(
             authentication
         }
 
-        val csrfRepository = CustomCsrfTokenRepository.withHttpOnlyFalse()
-        csrfRepository.setAllowedOrigins(applicationSettings.allowedOrigins.split(","))
-
-        http.cors().and()
-            .csrf()
-            .csrfTokenRepository(csrfRepository)
-            .and()
-            .sessionManagement()
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and().addFilter(filter)
-            .authorizeRequests{ authorize ->
-                authorize.antMatchers(HttpMethod.GET, "/ping").permitAll()
-                    .antMatchers(HttpMethod.GET, "/ready").permitAll()
-                    .anyRequest().authenticated()
+        http {
+            cors {
+                configurationSource = corsConfigurationSource()
             }
+            csrf {
+                requireCsrfProtectionMatcher = RequestMatcher {
+                    it.servletPath.equals("/preview")
+                }
+
+                val csrfRepository = CustomCsrfTokenRepository.withHttpOnlyFalse()
+                csrfRepository.setAllowedOrigins(applicationSettings.allowedOrigins.split(","))
+                csrfTokenRepository = csrfRepository
+            }
+            sessionManagement {
+                sessionCreationPolicy = SessionCreationPolicy.STATELESS
+            }
+            addFilterBefore<BasicAuthenticationFilter>(filter)
+            authorizeHttpRequests {
+                authorize(HttpMethod.GET,"/ping", permitAll)
+                authorize(HttpMethod.GET,"/ready", permitAll)
+                authorize(anyRequest, authenticated)
+            }
+        }
         return http.build()
     }
 
