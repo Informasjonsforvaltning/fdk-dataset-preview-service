@@ -4,7 +4,8 @@
 //
 package no.fdk.dataset.preview.security
 
-import no.fdk.dataset.preview.util.UrlUtil
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import no.fdk.dataset.preview.util.UrlUtil.Companion.getDomainName
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
@@ -15,8 +16,6 @@ import org.springframework.util.Assert
 import org.springframework.util.StringUtils
 import org.springframework.web.util.WebUtils
 import java.util.*
-import javax.servlet.http.HttpServletRequest
-import javax.servlet.http.HttpServletResponse
 
 class CustomCsrfTokenRepository : CsrfTokenRepository {
     private var parameterName = "_csrf"
