@@ -33,7 +33,21 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PreviewRequest'
-
+  /preview/csrf:
+    get:
+      description: Hent CSRF token
+      operationId: csrf
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: CSRF token
 
 components:
   schemas:

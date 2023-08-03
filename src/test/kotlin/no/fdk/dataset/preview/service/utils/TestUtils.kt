@@ -51,7 +51,7 @@ fun authorizedRequest(
     val request = RestTemplate()
     request.requestFactory = HttpComponentsClientHttpRequestFactory()
 
-    val csrfResponse = apiGetCSRF("http://localhost:$port/csrf", token)
+    val csrfResponse = apiGetCSRF("http://localhost:$port/preview/csrf", token)
 
     val headers = HttpHeaders()
     headers.accept = listOf(accept)
