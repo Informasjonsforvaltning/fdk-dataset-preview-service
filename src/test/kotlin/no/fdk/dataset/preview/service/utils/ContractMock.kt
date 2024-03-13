@@ -4,7 +4,7 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import org.springframework.beans.factory.ObjectFactory
 
-private val mockserver = WireMockServer(5000)
+private val mockserver = WireMockServer(5050)
 
 fun startMockServer() {
     if(!mockserver.isRunning) {
