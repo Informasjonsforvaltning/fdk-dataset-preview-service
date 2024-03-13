@@ -30,7 +30,7 @@ class PreviewContractTest : ApiTestContext() {
     @Test
     fun `Unauthorized when api token is not included`() {
         assertThrows<CsrfTestException> {
-            val previewRequest = PreviewRequest("http://localhost:5000/download", 5)
+            val previewRequest = PreviewRequest("http://localhost:5050/download", 5)
             val rsp = authorizedRequest("/preview", port, mapper.writeValueAsString(previewRequest),
                 null, HttpMethod.POST)
         }
@@ -38,7 +38,7 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun ok_csv() {
-        val previewRequest = PreviewRequest("http://localhost:5000/download/csv", 5)
+        val previewRequest = PreviewRequest("http://localhost:5050/download/csv", 5)
         val rsp = authorizedRequest(
             "/preview", port, mapper.writeValueAsString(previewRequest),
             "my-api-key", HttpMethod.POST
@@ -53,7 +53,7 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun ok_csv_zip() {
-        val previewRequest = PreviewRequest("http://localhost:5000/download/csv-zip", 5)
+        val previewRequest = PreviewRequest("http://localhost:5050/download/csv-zip", 5)
         val rsp = authorizedRequest(
             "/preview", port, mapper.writeValueAsString(previewRequest),
             "my-api-key", HttpMethod.POST
@@ -68,7 +68,7 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun ok_xlsx_zip() {
-        val previewRequest = PreviewRequest("http://localhost:5000/download/xlsx-zip", 10)
+        val previewRequest = PreviewRequest("http://localhost:5050/download/xlsx-zip", 10)
         val rsp = authorizedRequest(
             "/preview", port, mapper.writeValueAsString(previewRequest),
             "my-api-key", HttpMethod.POST
@@ -85,7 +85,7 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun ok_json_zip() {
-        val previewRequest = PreviewRequest("http://localhost:5000/download/json-zip", 10)
+        val previewRequest = PreviewRequest("http://localhost:5050/download/json-zip", 10)
         val rsp = authorizedRequest(
             "/preview", port, mapper.writeValueAsString(previewRequest),
             "my-api-key", HttpMethod.POST
@@ -104,7 +104,7 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun `Bad request`() {
-        val previewRequest = PreviewRequest("http://localhost:5000/download-link-does-not-exist", 5)
+        val previewRequest = PreviewRequest("http://localhost:5050/download-link-does-not-exist", 5)
         val rsp = authorizedRequest(
             "/preview", port, mapper.writeValueAsString(previewRequest),
             "my-api-key", HttpMethod.POST

@@ -28,4 +28,4 @@ spring:
   config.activate.on-profile: integration-test
 application:
   api-key: my-api-key
-  allowedOrigins: http://localhost:5000
+  allowedOrigins: http://localhost:5050
