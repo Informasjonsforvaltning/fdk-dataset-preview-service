@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.charset.Charset
@@ -157,7 +158,12 @@ class PreviewService(
                 zipEntry = zis.nextEntry
             }
         } finally {
-            zis.closeEntry()
+            try {
+                zis.closeEntry()
+            } catch (ex: IOException) {
+                // Ignore if reason is already closed zipEntry-stream
+                if (ex.message != "Stream closed") throw ex
+            }
             zis.close()
         }
 
