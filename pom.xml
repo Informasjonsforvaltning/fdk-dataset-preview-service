@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.3</version>
+        <version>3.3.3</version>
         <relativePath/>
     </parent>
 
@@ -24,9 +24,9 @@
         <maven.compiler.source>${java.release}</maven.compiler.source>
         <maven.compiler.target>${java.release}</maven.compiler.target>
 
-        <kotlin.version>1.9.23</kotlin.version>
-        <jena.version>4.9.0</jena.version>
-        <jackson.version>2.17.0</jackson.version>
+        <kotlin.version>2.0.20</kotlin.version>
+        <jena.version>5.1.0</jena.version>
+        <jackson.version>2.17.2</jackson.version>
     </properties>
 
     <dependencies>
@@ -52,7 +52,7 @@
         <dependency>
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
-            <version>7.4</version>
+            <version>8.0</version>
         </dependency>
 
         <dependency>
@@ -95,25 +95,25 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-csv</artifactId>
-            <version>1.10.0</version>
+            <version>1.11.0</version>
         </dependency>
 
         <!-- Excel -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>
-            <version>5.2.3</version>
+            <version>5.3.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.3</version>
+            <version>5.3.0</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-core</artifactId>
-            <version>2.9.1</version>
+            <version>2.9.2</version>
         </dependency>
 
         <!-- Test -->
@@ -131,13 +131,13 @@
         <dependency>
             <groupId>org.mockito.kotlin</groupId>
             <artifactId>mockito-kotlin</artifactId>
-            <version>5.1.0</version>
+            <version>5.4.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
-            <version>3.4.2</version>
+            <version>3.9.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -155,7 +155,7 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.13.0</version>
+            <version>2.16.1</version>
             <scope>compile</scope>
         </dependency>
 
@@ -172,7 +172,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.4.0</version>
+                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <id>add-source</id>
@@ -224,7 +224,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.1.2</version>
+                <version>3.5.0</version>
                 <configuration>
                     <useSystemClassLoader>false</useSystemClassLoader>
                     <groups>unit</groups>
@@ -237,7 +237,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>3.1.2</version>
+                <version>3.5.0</version>
                 <configuration>
                     <groups>integration</groups>
                     <excludedGroups>unit</excludedGroups>
