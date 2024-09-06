@@ -15,4 +15,4 @@ RUN addgroup --gid 1001 --system app && \
   chmod 770 /app
 USER app:app
 COPY --chown=app:app --from=build /app/target/fdk-dataset-preview-service.jar ./
-CMD java -Xss10m -jar fdk-dataset-preview-service.jar
+CMD ["sh", "-c", "java -Xss10m -jar fdk-dataset-preview-service.jar"]
