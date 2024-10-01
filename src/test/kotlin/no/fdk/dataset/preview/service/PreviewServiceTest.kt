@@ -168,7 +168,7 @@ class PreviewServiceTest {
         whenever(responseBody.contentType()).thenReturn(
             "text/turtle; charset=utf-8".toMediaTypeOrNull())
 
-        val resourceUrl = "http://domain.com/test.xml"
+        val resourceUrl = "http://domain.com/test.ttl"
         whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
 
         Assertions.assertThrows(Exception::class.java) {
