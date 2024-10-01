@@ -97,10 +97,10 @@ class PreviewService(
                 isZip(body.contentType().toString()) -> zipPreview(
                     rows,
                     inputStream)
-                isXlsx(body.contentType().toString()) -> xlsxPreview(
+                isXlsx(body.contentType().toString()) || isXlsxFile(resourceUrl) -> xlsxPreview(
                     rows,
                     inputStream)
-                isCsv(body.contentType().toString()) -> csvPreview(
+                isCsv(body.contentType().toString()) || isCsvFile(resourceUrl) -> csvPreview(
                     rows,
                     inputStream,
                     if (!inputStream.markSupported())
@@ -108,7 +108,7 @@ class PreviewService(
                     else
                         null,
                     body.contentType()?.charset())
-                isPlain(body.contentType().toString()) -> plainPreview(
+                isPlain(body.contentType().toString()) || isPlainFile(resourceUrl) -> plainPreview(
                     body.byteStream(),
                     body.contentType().toString(),
                     body.contentType()?.charset())
