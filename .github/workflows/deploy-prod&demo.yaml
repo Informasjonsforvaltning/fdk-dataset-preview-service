@@ -7,24 +7,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy-production:
+  build-fdk-dataset-preview-service:
     name: Deploy to prod on merge to main branch
-    uses: Informasjonsforvaltning/workflows/.github/workflows/build-deploy-maven.yaml@main
+    uses: Informasjonsforvaltning/workflows/.github/workflows/build-push.yaml@main
     with:
       app_name: fdk-dataset-preview-service
       java_version: '21'
+      coverage_file_path: ./target/site/jacoco/jacoco.xml
+      environment: prod
+    secrets:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  deploy-prod:
+    name: Deploy to prod environment
+    needs: [ build-fdk-dataset-preview-service ]
+    uses: Informasjonsforvaltning/workflows/.github/workflows/kustomize-deploy.yaml@main
+    with:
+      app_name: fdk-dataset-preview-service
       environment: prod
       cluster: digdir-fdk-prod
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GCP_SA_DIGDIR_FDK_GCR_KEY: ${{ secrets.GCP_SA_DIGDIR_FDK_GCR_KEY }}
       DIGDIR_FDK_AUTODEPLOY: ${{ secrets.DIGDIR_FDK_PROD_AUTODEPLOY }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   deploy-to-demo:
-    needs: build-and-deploy-production
+    needs: deploy-prod
     name: Deploy to demo if prod-deploy is successful
-    uses: Informasjonsforvaltning/workflows/.github/workflows/deploy.yaml@main
+    uses: Informasjonsforvaltning/workflows/.github/workflows/kustomize-deploy.yaml@main
     with:
       app_name: fdk-dataset-preview-service
       environment: demo

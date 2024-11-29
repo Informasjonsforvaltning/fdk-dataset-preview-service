@@ -7,26 +7,36 @@ on:
       - main
 
 jobs:
-  build-and-deploy-staging:
-    name: Call reusable workflow when pull request is created
+  build-fdk-dataset-preview-service:
+    name: Build when pull request is created
     if: ${{ github.actor != 'dependabot[bot]' && github.event.pull_request.draft == false }}
-    uses: Informasjonsforvaltning/workflows/.github/workflows/build-deploy-maven.yaml@main
+    uses: Informasjonsforvaltning/workflows/.github/workflows/build-push.yaml@main
     with:
       app_name: fdk-dataset-preview-service
       java_version: '21'
+      coverage_file_path: ./target/site/jacoco/jacoco.xml
+      environment: staging
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  deploy-to-staging:
+    name: Deploy to staging environment
+    if: ${{ github.actor != 'dependabot[bot]' && github.event.pull_request.draft == false }}
+    needs: [ build-fdk-dataset-preview-service ]
+    uses: Informasjonsforvaltning/workflows/.github/workflows/kustomize-deploy.yaml@main
+    with:
+      app_name: fdk-dataset-preview-service
       environment: staging
       cluster: digdir-fdk-dev
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GCP_SA_DIGDIR_FDK_GCR_KEY: ${{ secrets.GCP_SA_DIGDIR_FDK_GCR_KEY }}
       DIGDIR_FDK_AUTODEPLOY: ${{ secrets.DIGDIR_FDK_DEV_AUTODEPLOY }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   dependabot-build:
     name: Build image on PR from dependabot
-    if: ${{ github.actor == 'dependabot[bot]' }}
+    if: ${{ github.actor == 'dependabot[bot]' && github.event_name == 'pull_request' }}
     uses: Informasjonsforvaltning/workflows/.github/workflows/build.yaml@main
     with:
       java_version: '21'
-    secrets:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
