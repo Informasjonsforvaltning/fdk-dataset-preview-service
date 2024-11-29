@@ -17,6 +17,6 @@ jobs:
     uses: Informasjonsforvaltning/workflows/.github/workflows/codeql.yaml@main
     with:
       language: java
-      java_version: '17'
+      java_version: '21'
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
