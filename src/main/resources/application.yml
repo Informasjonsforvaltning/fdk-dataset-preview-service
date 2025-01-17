@@ -29,3 +29,4 @@ spring:
 application:
   api-key: my-api-key
   allowedOrigins: http://localhost:5050
+  allowLocalhost: true
