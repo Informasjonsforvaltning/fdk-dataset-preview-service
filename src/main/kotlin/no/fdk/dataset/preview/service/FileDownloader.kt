@@ -1,12 +1,14 @@
 package no.fdk.dataset.preview.service
 
-import no.fdk.dataset.preview.util.UrlValidator
+import no.fdk.dataset.preview.util.validate
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.ResponseBody
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URISyntaxException
 import java.util.concurrent.TimeUnit
 
 @Component
@@ -30,11 +32,21 @@ class FileDownloader {
 
     fun download(url: String): ResponseBody {
         try {
-            if (!allowLocalhost) {
-                UrlValidator.validate(url)
+            val uri = try {
+                URI(url)
+            } catch (e: Exception) {
+                throw DownloadException("Invalid URL format: ${e.message}")
             }
 
-            val request = Request.Builder().url(url).build()
+            if (!allowLocalhost) {
+                try {
+                    uri.validate()
+                } catch (e: URISyntaxException) {
+                    throw DownloadException("$e.message")
+                }
+            }
+
+            val request = Request.Builder().url(uri.toURL()).build()
             val response = okHttpClient.newCall(request).execute()
             val body = response.body
             val responseCode = response.code
