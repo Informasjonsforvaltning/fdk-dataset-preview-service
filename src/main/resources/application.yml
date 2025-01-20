@@ -1,6 +1,7 @@
 application:
   api-key: ${API_KEY:}
   allowedOrigins: ${ALLOWED_ORIGINS:}
+  allowLocalhost: ${ALLOW_LOCALHOST:false}
 
 logging:
   level.root: WARN
@@ -14,7 +15,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
+        include: health, info, prometheus
   metrics:
     tags:
       application: fdk-dataset-preview-service
