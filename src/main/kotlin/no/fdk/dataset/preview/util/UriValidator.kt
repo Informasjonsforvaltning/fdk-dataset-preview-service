@@ -7,7 +7,7 @@ fun URI.validate() {
     val host = this.host ?: throw UrlException("Invalid URI host")
     val scheme = this.scheme?.lowercase() ?: throw UrlException("Invalid URI scheme")
 
-    if (scheme !in listOf("http", "https")) {
+    if (scheme !in listOf("https")) {
         throw UrlException("Blocked unsafe URL scheme: $scheme")
     }
 

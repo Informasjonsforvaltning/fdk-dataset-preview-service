@@ -3,9 +3,11 @@ package no.fdk.dataset.preview.controller
 import no.fdk.dataset.preview.model.PreviewRequest
 import no.fdk.dataset.preview.service.PreviewException
 import no.fdk.dataset.preview.service.PreviewService
+import no.fdk.dataset.preview.service.UrlException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.net.URISyntaxException
 
 @RestController
 @RequestMapping("/preview")
@@ -16,17 +18,28 @@ class PreviewController(
     fun preview(): ResponseEntity<Any> {
         return try {
             ResponseEntity.ok().build()
-        } catch(e: PreviewException) {
+        } catch (e: PreviewException) {
             ResponseEntity<Any>(e.message, HttpStatus.BAD_REQUEST)
         }
     }
+
     @PostMapping(consumes = ["application/json"])
     fun preview(@RequestBody previewRequest: PreviewRequest): ResponseEntity<Any> {
         return try {
             val preview = previewService.readAndParseResource(previewRequest.url, previewRequest.rows)
             ResponseEntity.ok(preview)
-        } catch(e: PreviewException) {
+        } catch (e: PreviewException) {
             ResponseEntity<Any>(e.message, HttpStatus.BAD_REQUEST)
         }
+    }
+
+    @ExceptionHandler
+    fun handleUrldException(ex: UrlException): ResponseEntity<String> {
+        return ResponseEntity.badRequest().body("Illegal url")
+    }
+
+    @ExceptionHandler
+    fun handleUURISyntaxExceptio(ex: URISyntaxException): ResponseEntity<String> {
+        return ResponseEntity.badRequest().body("Invalid url");
     }
 }
