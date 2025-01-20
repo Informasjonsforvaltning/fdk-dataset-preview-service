@@ -4,6 +4,8 @@ import no.fdk.dataset.preview.util.validate
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.ResponseBody
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.net.HttpURLConnection
@@ -23,17 +25,26 @@ class FileDownloader {
     private var okHttpClient: OkHttpClient
 
     init {
-        val okHttpBuilder = OkHttpClient().newBuilder()
-            .connectTimeout(HTTP_TIMEOUT.toLong(), TimeUnit.SECONDS)
+        val okHttpBuilder = OkHttpClient().newBuilder().connectTimeout(HTTP_TIMEOUT.toLong(), TimeUnit.SECONDS)
             .readTimeout(HTTP_TIMEOUT.toLong(), TimeUnit.SECONDS)
         this.okHttpClient = okHttpBuilder.build()
     }
 
     fun download(url: String): ResponseBody {
-        val uri = URI(url)
+        val uri = try {
+            URI(url)
+        } catch (e: Exception) {
+            throw DownloadUrlException("Invalid URL: ${e.message}")
+        }
 
         if (!allowLocalhost) {
-            uri.validate()
+            try {
+                uri.validate()
+            } catch (e: UrlException) {
+                logger.warn(e.message)
+
+                throw DownloadUrlException("Illegal URL: $uri")
+            }
         }
 
         try {
@@ -41,10 +52,7 @@ class FileDownloader {
             val response = okHttpClient.newCall(request).execute()
             val body = response.body
             val responseCode = response.code
-            if (responseCode >= HttpURLConnection.HTTP_OK &&
-                responseCode < HttpURLConnection.HTTP_MULT_CHOICE &&
-                body != null
-            ) {
+            if (responseCode >= HttpURLConnection.HTTP_OK && responseCode < HttpURLConnection.HTTP_MULT_CHOICE && body != null) {
                 return body
             } else {
                 throw DownloadException("Error occurred when do http get $url (status $responseCode)")
@@ -54,3 +62,5 @@ class FileDownloader {
         }
     }
 }
+
+private val logger: Logger = LoggerFactory.getLogger(FileDownloader::class.java)

@@ -1,13 +1,12 @@
 package no.fdk.dataset.preview.controller
 
 import no.fdk.dataset.preview.model.PreviewRequest
+import no.fdk.dataset.preview.service.DownloadUrlException
 import no.fdk.dataset.preview.service.PreviewException
 import no.fdk.dataset.preview.service.PreviewService
-import no.fdk.dataset.preview.service.UrlException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import java.net.URISyntaxException
 
 @RestController
 @RequestMapping("/preview")
@@ -34,12 +33,7 @@ class PreviewController(
     }
 
     @ExceptionHandler
-    fun handleUrldException(ex: UrlException): ResponseEntity<String> {
-        return ResponseEntity.badRequest().body("Illegal url")
-    }
-
-    @ExceptionHandler
-    fun handleUURISyntaxExceptio(ex: URISyntaxException): ResponseEntity<String> {
-        return ResponseEntity.badRequest().body("Invalid url");
+    fun handleDownloadUrldException(ex: DownloadUrlException): ResponseEntity<String> {
+        return ResponseEntity.badRequest().body(ex.message)
     }
 }
