@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URISyntaxException
 import java.util.concurrent.TimeUnit
 
 @Component
@@ -33,8 +34,10 @@ class FileDownloader {
     fun download(url: String): ResponseBody {
         val uri = try {
             URI(url)
-        } catch (e: Exception) {
-            throw DownloadUrlException("Invalid URL: ${e.message}")
+        } catch (e: URISyntaxException) {
+            logger.warn(e.message)
+
+            throw DownloadUrlException("Invalid URL: $url")
         }
 
         if (!allowLocalhost) {
