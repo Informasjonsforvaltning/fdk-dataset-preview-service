@@ -16,6 +16,9 @@ spec:
     metadata:
       labels:
         fdk.service: fdk-dataset-preview-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
     spec:
       containers:
         - name: fdk-dataset-preview-service

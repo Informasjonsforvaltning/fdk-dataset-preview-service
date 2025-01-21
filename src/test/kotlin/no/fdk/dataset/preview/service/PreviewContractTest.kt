@@ -111,4 +111,24 @@ class PreviewContractTest : ApiTestContext() {
         )
         assertEquals(HttpStatus.BAD_REQUEST.value(), rsp["status"])
     }
+
+    @Test
+    fun `Invalid url`() {
+        val previewRequest = PreviewRequest("https://local", 5)
+        val rsp = authorizedRequest(
+            "/preview", port, mapper.writeValueAsString(previewRequest),
+            "my-api-key", HttpMethod.POST
+        )
+        assertEquals(HttpStatus.BAD_REQUEST.value(), rsp["status"])
+    }
+
+    @Test
+    fun `Illegal url`() {
+        val previewRequest = PreviewRequest("https://kubernetes.default.svc", 5)
+        val rsp = authorizedRequest(
+            "/preview", port, mapper.writeValueAsString(previewRequest),
+            "my-api-key", HttpMethod.POST
+        )
+        assertEquals(HttpStatus.BAD_REQUEST.value(), rsp["status"])
+    }
 }
