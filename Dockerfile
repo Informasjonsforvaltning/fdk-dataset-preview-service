@@ -1,18 +1,21 @@
-FROM maven:3.9.9-eclipse-temurin-21-jammy AS build
-WORKDIR /app
-COPY pom.xml ./
-COPY src ./src
-RUN mvn clean package --no-transfer-progress -DskipTests
-RUN mvn versions:display-dependency-updates --no-transfer-progress
+FROM eclipse-temurin:21-jre-alpine
 
-FROM eclipse-temurin:21-jre-jammy
+ARG USER=default
+ENV HOME=/home/$USER
+
 ENV TZ=Europe/Oslo
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-WORKDIR /app
-RUN addgroup --gid 1001 --system app && \
-  adduser --uid 1001 --system app --gid 1001 && \
-  chown -R app:app /app && \
-  chmod 770 /app
-USER app:app
-COPY --chown=app:app --from=build /app/target/fdk-dataset-preview-service.jar ./
-CMD ["sh", "-c", "java -Xss10m -jar fdk-dataset-preview-service.jar"]
+
+# install sudo as root
+RUN apk add --update sudo
+
+RUN adduser -D $USER \
+        && echo "$USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$USER \
+        && chmod 0440 /etc/sudoers.d/$USER
+
+USER $USER
+WORKDIR $HOME
+
+COPY --chown=app:app /target/app.jar app.jar
+
+CMD ["sh", "-c", "java -jar $JAVA_OPTS app.jar"]

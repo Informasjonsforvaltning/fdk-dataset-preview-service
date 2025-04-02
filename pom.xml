@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.1</version>
+        <version>3.4.4</version>
         <relativePath/>
     </parent>
 
@@ -24,9 +24,9 @@
         <maven.compiler.source>${java.release}</maven.compiler.source>
         <maven.compiler.target>${java.release}</maven.compiler.target>
 
-        <kotlin.version>2.1.0</kotlin.version>
-        <jena.version>5.2.0</jena.version>
-        <jackson.version>2.18.2</jackson.version>
+        <kotlin.version>2.1.20</kotlin.version>
+        <jena.version>5.3.0</jena.version>
+        <jackson.version>2.18.3</jackson.version>
     </properties>
 
     <dependencies>
@@ -95,7 +95,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-csv</artifactId>
-            <version>1.13.0</version>
+            <version>1.14.0</version>
         </dependency>
 
         <!-- Excel -->
@@ -113,7 +113,7 @@
         <dependency>
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-core</artifactId>
-            <version>3.0.0</version>
+            <version>3.1.0</version>
         </dependency>
 
         <!-- Test -->
@@ -137,13 +137,13 @@
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
-            <version>3.10.0</version>
+            <version>3.12.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
-            <version>5.4.1</version>
+            <version>5.4.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>
