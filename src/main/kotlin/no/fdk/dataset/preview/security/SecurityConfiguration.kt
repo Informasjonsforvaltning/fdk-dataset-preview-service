@@ -6,18 +6,19 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter
+import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
-import org.springframework.security.config.annotation.web.invoke
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter
-import org.springframework.security.web.util.matcher.RequestMatcher
 
 @Configuration
 open class SecurityConfiguration(
-    private val applicationSettings: ApplicationSettings) {
+    private val applicationSettings: ApplicationSettings
+) {
 
     @Bean
     open fun filterChain(http: HttpSecurity): SecurityFilterChain {
@@ -50,8 +51,10 @@ open class SecurityConfiguration(
             }
             addFilterBefore<BasicAuthenticationFilter>(filter)
             authorizeHttpRequests {
-                authorize(HttpMethod.GET,"/ping", permitAll)
-                authorize(HttpMethod.GET,"/ready", permitAll)
+                authorize(HttpMethod.GET, "/ping", permitAll)
+                authorize(HttpMethod.GET, "/ready", permitAll)
+                authorize(HttpMethod.GET, "/swagger-ui/**", permitAll)
+                authorize(HttpMethod.GET, "/v3/**", permitAll)
                 authorize(anyRequest, authenticated)
             }
         }
