@@ -22,6 +22,17 @@ spec:
     spec:
       containers:
         - name: fdk-dataset-preview-service
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fdk-dataset-preview-service
+                  key: API_KEY
+            - name: ALLOWED_ORIGINS
+              valueFrom:
+                secretKeyRef:
+                  name: fdk-dataset-preview-service
+                  key: ALLOWED_ORIGINS
           image: fdk-dataset-preview-service
           imagePullPolicy: Always
           ports:
