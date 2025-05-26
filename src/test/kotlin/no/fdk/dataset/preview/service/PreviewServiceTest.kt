@@ -1,10 +1,13 @@
 package no.fdk.dataset.preview.service
 
+import no.fdk.dataset.preview.model.Preview
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.ResponseBody
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
@@ -24,7 +27,10 @@ class PreviewServiceTest {
             "text/csv; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.csv"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table!!
@@ -45,7 +51,10 @@ class PreviewServiceTest {
             "application/zip".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.csv.zip"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table!!
@@ -66,7 +75,10 @@ class PreviewServiceTest {
             "application~/vnd.ms-excel~; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.csv"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table!!
@@ -86,7 +98,10 @@ class PreviewServiceTest {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.xlsx"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table!!
@@ -106,7 +121,10 @@ class PreviewServiceTest {
             "application/xml; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.xml"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table
@@ -127,7 +145,10 @@ class PreviewServiceTest {
             "application/3gpp-ims+xml; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.xml"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table
@@ -148,7 +169,10 @@ class PreviewServiceTest {
             "application/alto-costmap+json; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.json"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table
@@ -169,7 +193,10 @@ class PreviewServiceTest {
             "text/turtle; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.ttl"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         Assertions.assertThrows(Exception::class.java) {
             previewService.readAndParseResource(resourceUrl, 10)
@@ -186,7 +213,10 @@ class PreviewServiceTest {
             "text/csv; charset=iso-8859-1".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/iso-charset.csv"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table!!
@@ -206,7 +236,10 @@ class PreviewServiceTest {
             "text/csv; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/utf8-charset.csv"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table!!
@@ -226,7 +259,10 @@ class PreviewServiceTest {
             "text/csv; charset=utf-16".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/utf16-charset.csv"
-        whenever(downloader.download(resourceUrl)).thenReturn(responseBody)
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
 
         val preview = previewService.readAndParseResource(resourceUrl, 10)
         val table = preview.table!!
