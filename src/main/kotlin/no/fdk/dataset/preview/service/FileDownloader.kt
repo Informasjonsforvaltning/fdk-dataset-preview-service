@@ -31,12 +31,11 @@ class FileDownloader {
         this.okHttpClient = okHttpBuilder.build()
     }
 
-    fun download(url: String): ResponseBody {
+    fun <T> download(url: String, block: (ResponseBody) -> T): T {
         val uri = try {
             URI(url)
         } catch (e: URISyntaxException) {
             logger.warn(e.message)
-
             throw DownloadUrlException("Invalid URL: $url")
         }
 
@@ -45,7 +44,6 @@ class FileDownloader {
                 uri.validate()
             } catch (e: UrlException) {
                 logger.warn(e.message)
-
                 throw DownloadUrlException("Illegal URL: $uri")
             }
         }
@@ -55,8 +53,8 @@ class FileDownloader {
             val response = okHttpClient.newCall(request).execute()
             val body = response.body
             val responseCode = response.code
-            if (responseCode >= HttpURLConnection.HTTP_OK && responseCode < HttpURLConnection.HTTP_MULT_CHOICE && body != null) {
-                return body
+            if (responseCode in HttpURLConnection.HTTP_OK until HttpURLConnection.HTTP_MULT_CHOICE && body != null) {
+                return body.use { block(it) }
             } else {
                 throw DownloadException("Error occurred when do http get $url (status $responseCode)")
             }

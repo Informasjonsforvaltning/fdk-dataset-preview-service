@@ -89,41 +89,42 @@ class PreviewService(
         logDebug("Read and parse resource $resourceUrl")
 
         try {
-            val body = downloader.download(resourceUrl)
-            body.byteStream().use { inputStream ->
-                return when {
-                    isZip(body.contentType().toString()) -> zipPreview(
-                        rows,
-                        inputStream)
-                    isXlsx(body.contentType().toString()) || isXlsxFile(resourceUrl) -> xlsxPreview(
-                        rows,
-                        inputStream)
-                    isCsv(body.contentType().toString()) || isCsvFile(resourceUrl) -> {
-                        val secondStream = if (!inputStream.markSupported())
-                            downloader.download(resourceUrl).byteStream()
-                        else
-                            null
-                        secondStream?.use {
-                            csvPreview(
-                                rows,
-                                inputStream,
-                                it,
-                                body.contentType()?.charset()
-                            )
-                        } ?: csvPreview(
+            return downloader.download(resourceUrl, { body ->
+                body.byteStream().use { inputStream ->
+                    when {
+                        isZip(body.contentType().toString()) -> zipPreview(
                             rows,
+                            inputStream)
+                        isXlsx(body.contentType().toString()) || isXlsxFile(resourceUrl) -> xlsxPreview(
+                            rows,
+                            inputStream)
+                        isCsv(body.contentType().toString()) || isCsvFile(resourceUrl) ->
+                            if (!inputStream.markSupported())
+                                downloader.download(resourceUrl, { secondBody ->
+                                    secondBody.byteStream().use { secondInputStream ->
+                                        csvPreview(
+                                            rows,
+                                            inputStream,
+                                            secondInputStream,
+                                            body.contentType()?.charset()
+                                        )
+                                    }
+                                })
+                            else
+                                csvPreview(
+                                    rows,
+                                    inputStream,
+                                    null,
+                                    body.contentType()?.charset()
+                                )
+                        isPlain(body.contentType().toString()) || isPlainFile(resourceUrl) -> plainPreview(
                             inputStream,
-                            null,
-                            body.contentType()?.charset()
-                        )
+                            body.contentType().toString(),
+                            body.contentType()?.charset())
+                        else -> throw PreviewException("Invalid content type ${body.contentType().toString()}")
                     }
-                    isPlain(body.contentType().toString()) || isPlainFile(resourceUrl) -> plainPreview(
-                        inputStream,
-                        body.contentType().toString(),
-                        body.contentType()?.charset())
-                    else -> throw PreviewException("Invalid content type ${body.contentType().toString()}")
                 }
-            }
+            })
         } catch(e: DownloadException) {
             logDebug("Unable to download resource $resourceUrl", e)
             throw PreviewException("Unable to download resource $resourceUrl")
