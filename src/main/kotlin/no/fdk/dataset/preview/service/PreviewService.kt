@@ -118,7 +118,7 @@ class PreviewService(
                         )
                     }
                     isPlain(body.contentType().toString()) || isPlainFile(resourceUrl) -> plainPreview(
-                        body.byteStream().use { it },
+                        inputStream,
                         body.contentType().toString(),
                         body.contentType()?.charset())
                     else -> throw PreviewException("Invalid content type ${body.contentType().toString()}")
