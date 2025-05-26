@@ -85,34 +85,44 @@ class PreviewService(
             else -> rows
         }
 
-
     fun readAndParseResource(resourceUrl: String, rows: Int?): Preview {
         logDebug("Read and parse resource $resourceUrl")
 
         try {
             val body = downloader.download(resourceUrl)
-            val inputStream = body.byteStream()
-
-            return when {
-                isZip(body.contentType().toString()) -> zipPreview(
-                    rows,
-                    inputStream)
-                isXlsx(body.contentType().toString()) || isXlsxFile(resourceUrl) -> xlsxPreview(
-                    rows,
-                    inputStream)
-                isCsv(body.contentType().toString()) || isCsvFile(resourceUrl) -> csvPreview(
-                    rows,
-                    inputStream,
-                    if (!inputStream.markSupported())
-                        downloader.download(resourceUrl).byteStream()
-                    else
-                        null,
-                    body.contentType()?.charset())
-                isPlain(body.contentType().toString()) || isPlainFile(resourceUrl) -> plainPreview(
-                    body.byteStream(),
-                    body.contentType().toString(),
-                    body.contentType()?.charset())
-                else -> throw PreviewException("Invalid content type ${body.contentType().toString()}")
+            body.byteStream().use { inputStream ->
+                return when {
+                    isZip(body.contentType().toString()) -> zipPreview(
+                        rows,
+                        inputStream)
+                    isXlsx(body.contentType().toString()) || isXlsxFile(resourceUrl) -> xlsxPreview(
+                        rows,
+                        inputStream)
+                    isCsv(body.contentType().toString()) || isCsvFile(resourceUrl) -> {
+                        val secondStream = if (!inputStream.markSupported())
+                            downloader.download(resourceUrl).byteStream()
+                        else
+                            null
+                        secondStream?.use {
+                            csvPreview(
+                                rows,
+                                inputStream,
+                                it,
+                                body.contentType()?.charset()
+                            )
+                        } ?: csvPreview(
+                            rows,
+                            inputStream,
+                            null,
+                            body.contentType()?.charset()
+                        )
+                    }
+                    isPlain(body.contentType().toString()) || isPlainFile(resourceUrl) -> plainPreview(
+                        body.byteStream().use { it },
+                        body.contentType().toString(),
+                        body.contentType()?.charset())
+                    else -> throw PreviewException("Invalid content type ${body.contentType().toString()}")
+                }
             }
         } catch(e: DownloadException) {
             logDebug("Unable to download resource $resourceUrl", e)
@@ -197,31 +207,49 @@ class PreviewService(
         val formatter = DataFormatter()
         val sheet = workbook.getSheetAt(0)
 
+        // Initialize a variable to track the last cell number in the sheet
         var lastCellNum = 0
+
+        // Iterate through each row in the sheet
         sheet.forEach { row ->
+            // Map the row's cells to a list of formatted cell values and create a TableRow object
             val tableRow = TableRow(row.map {
-                formatter.formatCellValue(it)
+                formatter.formatCellValue(it) // Format the cell value for consistent representation
             })
 
+            // Add the created TableRow to the list of table rows
             tableRows.add(tableRow)
 
+            // Update the lastCellNum based on the current row's last cell number
             lastCellNum = when {
-                row.lastCellNum <= lastCellNum -> lastCellNum
-                formatter.formatCellValue(row.last()).isNotEmpty() -> row.physicalNumberOfCells
-                else -> lastCellNum
+                row.lastCellNum <= lastCellNum -> lastCellNum // Keep the current lastCellNum if it's greater
+                formatter.formatCellValue(row.last()).isNotEmpty() -> row.physicalNumberOfCells // Update if the last cell is not empty
+                else -> lastCellNum // Otherwise, retain the current lastCellNum
             }
         }
 
+        // Find the index of the header row based on the number of columns and non-empty last column
         val headerIndex = tableRows.indexOfFirst {
-            it.columns.size == lastCellNum && it.columns[lastCellNum-1].isNotEmpty()
+            it.columns.size == lastCellNum && it.columns[lastCellNum - 1].isNotEmpty()
         }
-        val startHeaderIndex = if (headerIndex == -1) 0 else headerIndex
-        val endHeaderIndex = startHeaderIndex + 1
-        val endRowsIndex =
-            if (endHeaderIndex + getMaxNumberOfRows(rows) <= tableRows.size - 1) endHeaderIndex + getMaxNumberOfRows(rows)
-            else tableRows.size - 1
 
+        // Determine the starting index of the header row
+        val startHeaderIndex = if (headerIndex == -1) 0 else headerIndex
+
+        // Calculate the ending index of the header row (exclusive)
+        val endHeaderIndex = startHeaderIndex + 1
+
+        // Calculate the ending index for the rows to be included in the table
+        val endRowsIndex =
+            if (endHeaderIndex + getMaxNumberOfRows(rows) <= tableRows.size - 1)
+                endHeaderIndex + getMaxNumberOfRows(rows) // Limit rows to the maximum allowed
+            else
+                tableRows.size - 1 // Include all rows if the limit exceeds the total rows
+
+        // Extract the header row from the table rows and create a TableHeader object
         val header = TableHeader(tableRows.subList(startHeaderIndex, endHeaderIndex)[0].columns)
+
+        // Beautify the header for better readability or formatting
         header.beautify()
 
         val table = Table(header, tableRows.subList(endHeaderIndex, endRowsIndex))
