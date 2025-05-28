@@ -90,6 +90,10 @@ class PreviewService(
 
         try {
             return downloader.download(resourceUrl, { body ->
+                if(body.contentLength() > MAX_SIZE_IN_BYTES) {
+                    throw PreviewException("File ${resourceUrl} is too large")
+                }
+
                 body.byteStream().use { inputStream ->
                     when {
                         isZip(body.contentType().toString()) -> zipPreview(
