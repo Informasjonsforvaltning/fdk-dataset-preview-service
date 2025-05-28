@@ -48,15 +48,17 @@ class FileDownloader {
             }
         }
 
+
         try {
             val request = Request.Builder().url(uri.toURL()).build()
-            val response = okHttpClient.newCall(request).execute()
-            val body = response.body
-            val responseCode = response.code
-            if (responseCode in HttpURLConnection.HTTP_OK until HttpURLConnection.HTTP_MULT_CHOICE && body != null) {
-                return body.use { block(it) }
-            } else {
-                throw DownloadException("Error occurred when do http get $url (status $responseCode)")
+            okHttpClient.newCall(request).execute().use { response ->
+                val body = response.body
+                val responseCode = response.code
+                if (responseCode in HttpURLConnection.HTTP_OK until HttpURLConnection.HTTP_MULT_CHOICE && body != null) {
+                    return block(body)
+                } else {
+                    throw DownloadException("Error occurred when do http get $url (status $responseCode)")
+                }
             }
         } catch (e: Exception) {
             throw DownloadException(e.message)
