@@ -4,9 +4,13 @@ import no.fdk.dataset.preview.model.PreviewRequest
 import no.fdk.dataset.preview.service.DownloadUrlException
 import no.fdk.dataset.preview.service.PreviewException
 import no.fdk.dataset.preview.service.PreviewService
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+
+private val LOGGER: Logger = LoggerFactory.getLogger(PreviewController::class.java)
 
 @RestController
 @RequestMapping("/preview")
@@ -18,7 +22,8 @@ class PreviewController(
         return try {
             ResponseEntity.ok().build()
         } catch (e: PreviewException) {
-            ResponseEntity<Any>(e.message, HttpStatus.BAD_REQUEST)
+            LOGGER.warn("Bad request - Failed to create preview", e)
+            ResponseEntity<Any>(HttpStatus.BAD_REQUEST)
         }
     }
 
@@ -28,12 +33,14 @@ class PreviewController(
             val preview = previewService.readAndParseResource(previewRequest.url, previewRequest.rows)
             ResponseEntity.ok(preview)
         } catch (e: PreviewException) {
-            ResponseEntity<Any>(e.message, HttpStatus.BAD_REQUEST)
+            LOGGER.warn("Bad request - Failed to create preview", e)
+            ResponseEntity<Any>(HttpStatus.BAD_REQUEST)
         }
     }
 
     @ExceptionHandler
     fun handleDownloadUrldException(ex: DownloadUrlException): ResponseEntity<String> {
-        return ResponseEntity.badRequest().body(ex.message)
+        LOGGER.warn("Bad request - Failed to download remote file", ex)
+        return ResponseEntity.badRequest().build()
     }
 }
