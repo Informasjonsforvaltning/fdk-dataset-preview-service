@@ -2,6 +2,24 @@ application:
   api-key: ${API_KEY:}
   allowedOrigins: ${ALLOWED_ORIGINS:}
   allowLocalhost: ${ALLOW_LOCALHOST:false}
+  # Security settings for SSRF protection
+  security:
+    # Allowlist of trusted domains (comma-separated)
+    allowedDomains: ${ALLOWED_DOMAINS:}
+    # Request timeout in seconds
+    requestTimeout: ${REQUEST_TIMEOUT:30}
+    # Maximum file size in bytes (default: 10MB)
+    maxFileSize: ${MAX_FILE_SIZE:10485760}
+    # Maximum processing time in seconds (default: 30s)
+    maxProcessingTime: ${MAX_PROCESSING_TIME:30}
+    # User-Agent string for requests (minimal to avoid information leakage)
+    userAgent: ${USER_AGENT:Mozilla/5.0}
+    # Enable request header sanitization
+    sanitizeHeaders: ${SANITIZE_HEADERS:true}
+    # Enable macro security (disable macro execution)
+    disableMacros: ${DISABLE_MACROS:true}
+    # Enable file signature validation
+    validateFileSignatures: ${VALIDATE_FILE_SIGNATURES:true}
 
 logging:
   level.root: WARN
@@ -23,7 +41,6 @@ management:
 ---
 spring:
   config.activate.on-profile: develop
-
 ---
 spring:
   config.activate.on-profile: integration-test
@@ -31,3 +48,9 @@ application:
   api-key: my-api-key
   allowedOrigins: http://localhost:5050
   allowLocalhost: true
+  security:
+    allowedDomains: localhost,127.0.0.1
+    requestTimeout: 10
+    maxFileSize: 5242880 # 5MB for tests
+    userAgent: "Test-Agent/1.0"
+    sanitizeHeaders: false # Allow more headers for testing
