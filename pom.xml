@@ -101,6 +101,13 @@
             <version>4.12.0</version>
             <scope>test</scope>
         </dependency>
+        
+        <!-- HTML Sanitization -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
 
         <!-- CSV -->
         <dependency>
