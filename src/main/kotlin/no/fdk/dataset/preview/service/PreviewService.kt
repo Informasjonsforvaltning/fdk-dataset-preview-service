@@ -1,6 +1,7 @@
 package no.fdk.dataset.preview.service
 
 import no.fdk.dataset.preview.model.*
+import no.fdk.dataset.preview.util.ContentSanitizer
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.io.IOUtils
@@ -250,7 +251,8 @@ class PreviewService(
             
             // Map the row's cells to a list of formatted cell values and create a TableRow object
             val tableRow = TableRow(row.map {
-                formatter.formatCellValue(it) // Format the cell value for consistent representation
+                val cellValue = formatter.formatCellValue(it) // Format the cell value for consistent representation
+                ContentSanitizer.sanitizeCellContent(cellValue) // Sanitize to prevent XSS attacks
             })
 
             // Add the created TableRow to the list of table rows
@@ -317,9 +319,9 @@ class PreviewService(
         // File signature validation removed - HTTPS responses don't support mark/reset
         // and the application only allows HTTPS URLs, making this validation redundant
         
-        val plain = Plain(IOUtils.toString(inputStream,
-            charset ?: Charset.forName("UTF-8")),
-            mediaType ?: "")
+        val content = IOUtils.toString(inputStream, charset ?: Charset.forName("UTF-8"))
+        val sanitizedContent = ContentSanitizer.removeDangerousContent(content) // Remove dangerous HTML/script content
+        val plain = Plain(sanitizedContent, mediaType ?: "")
         return Preview(table=null, plain=plain)
     }
 
@@ -328,12 +330,16 @@ class PreviewService(
         val tableRows = arrayListOf<TableRow>()
         val it = parser.iterator()
         if(it.hasNext()) {
-            tableHeader = TableHeader(it.next().toList())
+            tableHeader = TableHeader(it.next().map { headerValue ->
+                ContentSanitizer.sanitizeCellContent(headerValue) // Sanitize CSV header content to prevent XSS
+            })
             tableHeader.beautify()
         }
 
         while (it.hasNext() && (maxNumberOfRows <= 0 || tableRows.size < maxNumberOfRows)) {
-            tableRows.add(TableRow(it.next().toList()))
+            tableRows.add(TableRow(it.next().map { cellValue -> 
+                ContentSanitizer.sanitizeCellContent(cellValue) // Sanitize CSV cell content to prevent XSS
+            }))
         }
 
         return Table(tableHeader, tableRows)
