@@ -50,7 +50,11 @@ class FileDownloader {
 
 
         try {
-            val request = Request.Builder().url(uri.toURL()).build()
+            val request = Request.Builder()
+                .url(uri.toURL())
+                .addHeader("User-Agent", "FDK-Dataset-Preview/1.0")
+                .addHeader("Accept", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/zip,text/plain,application/json,application/xml")
+                .build()
             okHttpClient.newCall(request).execute().use { response ->
                 val body = response.body
                 val responseCode = response.code

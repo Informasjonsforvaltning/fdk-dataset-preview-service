@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.5</version>
+        <version>3.5.6</version>
         <relativePath/>
     </parent>
 
@@ -26,7 +26,7 @@
 
         <kotlin.version>2.1.21</kotlin.version>
         <jena.version>5.4.0</jena.version>
-        <jackson.version>2.19.0</jackson.version>
+        <jackson.version>2.19.1</jackson.version>
     </properties>
 
     <dependencies>
@@ -95,6 +95,12 @@
             <artifactId>okhttp</artifactId>
             <version>4.12.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <version>4.12.0</version>
+            <scope>test</scope>
+        </dependency>
 
         <!-- CSV -->
         <dependency>
@@ -118,7 +124,7 @@
         <dependency>
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-core</artifactId>
-            <version>3.2.0</version>
+            <version>3.2.3</version>
         </dependency>
 
         <!-- Test -->
@@ -142,7 +148,7 @@
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
-            <version>3.13.0</version>
+            <version>3.13.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -177,7 +183,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>3.6.1</version>
                 <executions>
                     <execution>
                         <id>add-source</id>
@@ -240,6 +246,7 @@
                     <excludedGroups>integration</excludedGroups>
                     <includes>
                         <include>**/*.java</include>
+                        <include>**/*.kt</include>
                     </includes>
                 </configuration>
             </plugin>
@@ -252,6 +259,7 @@
                     <excludedGroups>unit</excludedGroups>
                     <includes>
                         <include>**/*.java</include>
+                        <include>**/*.kt</include>
                     </includes>
                 </configuration>
             </plugin>

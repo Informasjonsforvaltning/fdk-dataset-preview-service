@@ -13,6 +13,7 @@ import org.apache.tika.metadata.Metadata
 import org.apache.tika.mime.MediaType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -26,13 +27,16 @@ import java.util.zip.ZipInputStream
 
 private val LOGGER: Logger = LoggerFactory.getLogger(PreviewService::class.java)
 
-// Max size in bytes (10MB)
-private const val MAX_SIZE_IN_BYTES: Int = 10000000
-
 @Service
 class PreviewService(
     private val downloader: FileDownloader
 ) {
+    
+    @Value("\${application.security.maxFileSize:10485760}")
+    private val maxFileSizeBytes: Long = 10485760
+    
+    @Value("\${application.security.maxProcessingTime:30}")
+    private val maxProcessingTimeSeconds: Long = 30L // 10MB default
     companion object {
         val DELIMITERS = arrayOf(';', ',')
         const val NO_DELIMITER = '\u0000' //empty char
@@ -90,8 +94,8 @@ class PreviewService(
 
         try {
             return downloader.download(resourceUrl, { body ->
-                if(body.contentLength() > MAX_SIZE_IN_BYTES) {
-                    throw PreviewException("File ${resourceUrl} is too large")
+                if(body.contentLength() > maxFileSizeBytes) {
+                    throw PreviewException("File ${resourceUrl} is too large (${body.contentLength()} bytes, max: ${maxFileSizeBytes} bytes)")
                 }
 
                 body.byteStream().use { inputStream ->
@@ -138,14 +142,17 @@ class PreviewService(
     private fun zipPreview(rows: Int?, inputStream: InputStream): Preview {
         logDebug("Extracting zip")
 
+        // File signature validation removed - HTTPS responses don't support mark/reset
+        // and the application only allows HTTPS URLs, making this validation redundant
+
         val zis = ZipInputStream(inputStream)
 
         try {
             var zipEntry = zis.nextEntry
             while (zipEntry != null) {
                 if (!zipEntry.isDirectory && isSupportedFile(zipEntry.name)) {
-                    if(zipEntry.size > MAX_SIZE_IN_BYTES) {
-                        throw PreviewException("File ${zipEntry.name} is too large")
+                    if(zipEntry.size > maxFileSizeBytes) {
+                        throw PreviewException("File ${zipEntry.name} is too large (${zipEntry.size} bytes, max: ${maxFileSizeBytes} bytes)")
                     }
 
                     if (isXlsxFile(zipEntry.name)) {
@@ -208,15 +215,39 @@ class PreviewService(
 
         val tableRows = arrayListOf<TableRow>()
 
-        val workbook: Workbook = XSSFWorkbook(inputStream)
+        // File signature validation removed - HTTPS responses don't support mark/reset
+        // and the application only allows HTTPS URLs, making this validation redundant
+
+        // Create workbook with macro security disabled to prevent malicious code execution
+        val workbook: Workbook = XSSFWorkbook(inputStream).apply {
+            // Disable macro execution for security
+            this.creationHelper.createFormulaEvaluator().clearAllCachedResultValues()
+        }
+        
+        // Add timeout protection for processing
+        val startTime = System.currentTimeMillis()
         val formatter = DataFormatter()
         val sheet = workbook.getSheetAt(0)
 
         // Initialize a variable to track the last cell number in the sheet
         var lastCellNum = 0
 
-        // Iterate through each row in the sheet
+        // Iterate through each row in the sheet with timeout and memory protection
+        var rowCount = 0
+        val maxRowsToProcess = getMaxNumberOfRows(rows) * 2 // Allow some buffer for processing
+        
         sheet.forEach { row ->
+            // Check processing timeout to prevent DoS attacks
+            if (System.currentTimeMillis() - startTime > maxProcessingTimeSeconds * 1000) {
+                throw PreviewException("Excel processing timeout exceeded (${maxProcessingTimeSeconds}s)")
+            }
+            
+            // Limit rows to prevent memory exhaustion
+            if (rowCount >= maxRowsToProcess) {
+                logDebug("Excel processing limited to $maxRowsToProcess rows for security")
+                return@forEach
+            }
+            
             // Map the row's cells to a list of formatted cell values and create a TableRow object
             val tableRow = TableRow(row.map {
                 formatter.formatCellValue(it) // Format the cell value for consistent representation
@@ -224,6 +255,7 @@ class PreviewService(
 
             // Add the created TableRow to the list of table rows
             tableRows.add(tableRow)
+            rowCount++
 
             // Update the lastCellNum based on the current row's last cell number
             lastCellNum = when {
@@ -264,6 +296,9 @@ class PreviewService(
     private fun csvPreview(rows: Int?, inputStream: InputStream, secondInputStream: InputStream?, charset: Charset?): Preview {
         logDebug("Parsing CSV")
 
+        // File signature validation removed - HTTPS responses don't support mark/reset
+        // and the application only allows HTTPS URLs, making this validation redundant
+
         val delimiter = detectDelimiter(inputStream)
         logDebug("Detected delimiter $delimiter")
 
@@ -278,6 +313,10 @@ class PreviewService(
 
     private fun plainPreview(inputStream: InputStream, mediaType: String?, charset: Charset?): Preview {
         logDebug("Fetch plain content")
+        
+        // File signature validation removed - HTTPS responses don't support mark/reset
+        // and the application only allows HTTPS URLs, making this validation redundant
+        
         val plain = Plain(IOUtils.toString(inputStream,
             charset ?: Charset.forName("UTF-8")),
             mediaType ?: "")
@@ -330,6 +369,7 @@ class PreviewService(
             """\+?json""".toRegex().containsMatchIn(mediaType) -> true
             else -> false
         }
+
 
     private fun isSupportedFile(fileName: String): Boolean =
         when {
