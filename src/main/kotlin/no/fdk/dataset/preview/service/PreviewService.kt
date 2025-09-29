@@ -37,7 +37,7 @@ class PreviewService(
     private val maxFileSizeBytes: Long = 10485760
     
     @Value("\${application.security.maxProcessingTime:30}")
-    private val maxProcessingTimeSeconds: Long = 30L // 10MB default
+    private val maxProcessingTimeSeconds: Long = 30L
     companion object {
         val DELIMITERS = arrayOf(';', ',')
         const val NO_DELIMITER = '\u0000' //empty char
@@ -96,7 +96,7 @@ class PreviewService(
         try {
             return downloader.download(resourceUrl, { body ->
                 if(body.contentLength() > maxFileSizeBytes) {
-                    throw PreviewException("File ${resourceUrl} is too large (${body.contentLength()} bytes, max: ${maxFileSizeBytes} bytes)")
+                    throw PreviewException("File is too large to process")
                 }
 
                 body.byteStream().use { inputStream ->
@@ -130,21 +130,18 @@ class PreviewService(
                             inputStream,
                             body.contentType().toString(),
                             body.contentType()?.charset())
-                        else -> throw PreviewException("Invalid content type ${body.contentType().toString()}")
+                        else -> throw PreviewException("Unsupported file format")
                     }
                 }
             })
         } catch(e: DownloadException) {
             logDebug("Unable to download resource $resourceUrl", e)
-            throw PreviewException("Unable to download resource $resourceUrl")
+            throw PreviewException("Failed to download file")
         }
     }
 
     private fun zipPreview(rows: Int?, inputStream: InputStream): Preview {
         logDebug("Extracting zip")
-
-        // File signature validation removed - HTTPS responses don't support mark/reset
-        // and the application only allows HTTPS URLs, making this validation redundant
 
         val zis = ZipInputStream(inputStream)
 
@@ -153,7 +150,7 @@ class PreviewService(
             while (zipEntry != null) {
                 if (!zipEntry.isDirectory && isSupportedFile(zipEntry.name)) {
                     if(zipEntry.size > maxFileSizeBytes) {
-                        throw PreviewException("File ${zipEntry.name} is too large (${zipEntry.size} bytes, max: ${maxFileSizeBytes} bytes)")
+                        throw PreviewException("File is too large to process")
                     }
 
                     if (isXlsxFile(zipEntry.name)) {
@@ -190,7 +187,7 @@ class PreviewService(
             zis.close()
         }
 
-        throw PreviewException("Zip file does not contain valid content")
+        throw PreviewException("Invalid zip file content")
     }
 
     private fun ZipInputStream.toByteArrayInputStream(): ByteArrayInputStream {
@@ -216,9 +213,6 @@ class PreviewService(
 
         val tableRows = arrayListOf<TableRow>()
 
-        // File signature validation removed - HTTPS responses don't support mark/reset
-        // and the application only allows HTTPS URLs, making this validation redundant
-
         // Create workbook with macro security disabled to prevent malicious code execution
         val workbook: Workbook = XSSFWorkbook(inputStream).apply {
             // Disable macro execution for security
@@ -240,7 +234,7 @@ class PreviewService(
         sheet.forEach { row ->
             // Check processing timeout to prevent DoS attacks
             if (System.currentTimeMillis() - startTime > maxProcessingTimeSeconds * 1000) {
-                throw PreviewException("Excel processing timeout exceeded (${maxProcessingTimeSeconds}s)")
+                throw PreviewException("File processing timeout exceeded")
             }
             
             // Limit rows to prevent memory exhaustion
@@ -298,26 +292,22 @@ class PreviewService(
     private fun csvPreview(rows: Int?, inputStream: InputStream, secondInputStream: InputStream?, charset: Charset?): Preview {
         logDebug("Parsing CSV")
 
-        // File signature validation removed - HTTPS responses don't support mark/reset
-        // and the application only allows HTTPS URLs, making this validation redundant
-
         val delimiter = detectDelimiter(inputStream)
         logDebug("Detected delimiter $delimiter")
 
         CSVFormat.DEFAULT.builder()
             .setDelimiter(delimiter)
             .setEscape('\\')
-            .build()
-            .parse( InputStreamReader( BOMInputStream(secondInputStream ?: inputStream),
+            .get()
+            .parse( InputStreamReader( BOMInputStream.Builder()
+                .setInputStream(secondInputStream ?: inputStream)
+                .get(),
                 charset ?: Charset.forName("UTF-8")))
             .use { return  Preview(table = parseCSVToTable(it, getMaxNumberOfRows(rows)), plain = null) }
     }
 
     private fun plainPreview(inputStream: InputStream, mediaType: String?, charset: Charset?): Preview {
         logDebug("Fetch plain content")
-        
-        // File signature validation removed - HTTPS responses don't support mark/reset
-        // and the application only allows HTTPS URLs, making this validation redundant
         
         val content = IOUtils.toString(inputStream, charset ?: Charset.forName("UTF-8"))
         val sanitizedContent = ContentSanitizer.removeDangerousContent(content) // Remove dangerous HTML/script content
@@ -375,7 +365,6 @@ class PreviewService(
             """\+?json""".toRegex().containsMatchIn(mediaType) -> true
             else -> false
         }
-
 
     private fun isSupportedFile(fileName: String): Boolean =
         when {

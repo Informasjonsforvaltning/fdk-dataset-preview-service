@@ -36,7 +36,7 @@ class FileDownloader {
             URI(url)
         } catch (e: URISyntaxException) {
             logger.warn(e.message)
-            throw DownloadUrlException("Invalid URL: $url")
+            throw DownloadUrlException("Invalid URL format")
         }
 
         if (!allowLocalhost) {
@@ -44,7 +44,7 @@ class FileDownloader {
                 uri.validate()
             } catch (e: UrlException) {
                 logger.warn(e.message)
-                throw DownloadUrlException("Illegal URL: $uri")
+                throw DownloadUrlException("URL not allowed")
             }
         }
 
@@ -61,11 +61,11 @@ class FileDownloader {
                 if (responseCode in HttpURLConnection.HTTP_OK until HttpURLConnection.HTTP_MULT_CHOICE && body != null) {
                     return block(body)
                 } else {
-                    throw DownloadException("Error occurred when do http get $url (status $responseCode)")
+                    throw DownloadException("Download failed with status $responseCode")
                 }
             }
         } catch (e: Exception) {
-            throw DownloadException(e.message)
+            throw DownloadException("Download failed")
         }
     }
 }

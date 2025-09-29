@@ -11,43 +11,43 @@ private val dnsCacheExpiry = ConcurrentHashMap<String, Long>()
 private const val DNS_CACHE_TTL_SECONDS = 300L // 5 minutes
 
 fun URI.validate() {
-    val host = this.host ?: throw UrlException("Invalid URI host")
-    val scheme = this.scheme?.lowercase() ?: throw UrlException("Invalid URI scheme")
+    val host = this.host ?: throw UrlException("Invalid URL format")
+    val scheme = this.scheme?.lowercase() ?: throw UrlException("Invalid URL format")
     val port = this.port
 
     // Enhanced scheme validation
     if (scheme !in listOf("https")) {
-        throw UrlException("Blocked unsafe URL scheme: $scheme")
+        throw UrlException("Unsafe URL scheme not allowed")
     }
 
     // Port validation - only allow standard HTTPS port
     if (port != -1 && port != 443) {
-        throw UrlException("Blocked non-standard port: $port")
+        throw UrlException("Non-standard port not allowed")
     }
 
     // Hostname validation
     if (!isValidHostname(host)) {
-        throw UrlException("Invalid hostname format: $host")
+        throw UrlException("Invalid hostname format")
     }
 
     // Check for suspicious patterns
     if (containsSuspiciousPatterns(host)) {
-        throw UrlException("Blocked suspicious hostname pattern: $host")
+        throw UrlException("Suspicious hostname pattern not allowed")
     }
 
     if (isKubernetes(host)) {
-        throw UrlException("Blocked access to Kubernetes internal services: $host")
+        throw UrlException("Internal service access not allowed")
     }
 
     val resolvedIps = resolveHostIPsWithCache(host)
     if (resolvedIps.any { isPrivateOrInternal(it) }) {
-        throw UrlException("Blocked internal network access: $host (${resolvedIps.joinToString()})")
+        throw UrlException("Internal network access not allowed")
     }
 
     // Double-check DNS resolution to prevent rebinding attacks
     val recheckIps = resolveHostIPsWithCache(host)
     if (resolvedIps.toSet() != recheckIps.toSet()) {
-        throw UrlException("Possible DNS Rebinding attack detected: ${resolvedIps.joinToString()} -> ${recheckIps.joinToString()}")
+        throw UrlException("DNS rebinding attack detected")
     }
 }
 
@@ -70,7 +70,7 @@ private fun resolveHostIPs(host: String): List<String> {
     return try {
         InetAddress.getAllByName(host).map { it.hostAddress }
     } catch (e: UnknownHostException) {
-        throw UrlException("Unresolvable host: $host")
+        throw UrlException("Hostname cannot be resolved")
     }
 }
 
