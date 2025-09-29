@@ -27,31 +27,14 @@ object ContentSanitizer {
     }
     
     /**
-     * Escapes HTML special characters to prevent XSS
-     */
-    fun escapeHtml(text: String): String {
-        if (text.isBlank()) return text
-        
-        return text
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#x27;")
-            .replace("/", "&#x2F;")
-    }
-    
-    /**
      * Sanitizes cell content by removing potentially dangerous content
+     * Note: HTML escaping is handled by React on the frontend
      */
     fun sanitizeCellContent(content: String): String {
         if (content.isBlank()) return content
         
-        // First escape HTML to prevent XSS
-        val escaped = escapeHtml(content)
-        
-        // Remove any remaining script-like patterns
-        val sanitized = escaped
+        // Remove script-like patterns and dangerous protocols
+        val sanitized = content
             .replace(Regex("(?i)javascript:"), "")
             .replace(Regex("(?i)vbscript:"), "")
             .replace(Regex("(?i)data:"), "")
