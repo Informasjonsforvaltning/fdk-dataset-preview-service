@@ -1,6 +1,6 @@
 package no.fdk.dataset.preview.service
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import no.fdk.dataset.preview.model.Preview
 import no.fdk.dataset.preview.model.PreviewRequest
 import no.fdk.dataset.preview.service.utils.ApiTestContext

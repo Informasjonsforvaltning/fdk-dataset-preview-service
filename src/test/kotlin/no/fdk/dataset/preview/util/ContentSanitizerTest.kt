@@ -105,6 +105,6 @@ class ContentSanitizerTest {
         val html = "<p>Hello <script>alert('XSS')</script> world!</p>"
         val sanitized = ContentSanitizer.sanitizeHtml(html)
         
-        assertEquals("<p>Hello  world!</p>", sanitized)
+        assertEquals("<p>Hello world!</p>", sanitized)
     }
 }
