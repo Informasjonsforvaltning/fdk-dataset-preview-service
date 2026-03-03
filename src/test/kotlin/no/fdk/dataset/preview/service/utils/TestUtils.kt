@@ -63,20 +63,20 @@ fun authorizedRequest(
 
     return try {
         val response = request.exchange("http://localhost:$port$path", httpMethod, entity, String::class.java)
-        mapOf(
-            "body" to response.body,
+        mapOf<String, Any>(
+            "body" to (response.body ?: ""),
             "header" to response.headers.toString(),
             "status" to response.statusCode.value()
         )
 
     } catch (e: HttpClientErrorException) {
-        mapOf(
-            "status" to e.rawStatusCode,
+        mapOf<String, Any>(
+            "status" to e.statusCode.value(),
             "header" to " ",
             "body" to e.toString()
         )
     } catch (e: Exception) {
-        mapOf(
+        mapOf<String, Any>(
             "status" to e.toString(),
             "header" to " ",
             "body" to " "
