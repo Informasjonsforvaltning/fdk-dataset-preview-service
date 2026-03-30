@@ -26,7 +26,7 @@
 
         <kotlin.version>2.2.21</kotlin.version>
         <jena.version>6.0.0</jena.version>
-        <jackson.version>3.1.0</jackson.version>
+        <jackson.version>3.1.1</jackson.version>
     </properties>
 
     <dependencies>
