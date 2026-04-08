@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.3</version>
+        <version>4.0.5</version>
         <relativePath/>
     </parent>
 
@@ -24,9 +24,9 @@
         <maven.compiler.source>${java.release}</maven.compiler.source>
         <maven.compiler.target>${java.release}</maven.compiler.target>
 
-        <kotlin.version>2.2.21</kotlin.version>
+        <kotlin.version>2.3.20</kotlin.version>
         <jena.version>6.0.0</jena.version>
-        <jackson.version>3.1.0</jackson.version>
+        <jackson.version>3.1.1</jackson.version>
     </properties>
 
     <dependencies>
@@ -136,7 +136,7 @@
         <dependency>
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-core</artifactId>
-            <version>3.2.3</version>
+            <version>3.3.0</version>
         </dependency>
 
         <!-- Test -->
@@ -154,7 +154,7 @@
         <dependency>
             <groupId>org.mockito.kotlin</groupId>
             <artifactId>mockito-kotlin</artifactId>
-            <version>6.2.3</version>
+            <version>6.3.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
