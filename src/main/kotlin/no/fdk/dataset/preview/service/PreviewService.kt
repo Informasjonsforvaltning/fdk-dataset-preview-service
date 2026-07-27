@@ -6,9 +6,16 @@ import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.io.IOUtils
 import org.apache.commons.io.input.BOMInputStream
+import org.apache.poi.openxml4j.opc.OPCPackage
+import org.apache.poi.openxml4j.opc.PackageAccess
 import org.apache.poi.ss.usermodel.DataFormatter
-import org.apache.poi.ss.usermodel.Workbook
-import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.apache.poi.ss.util.CellReference
+import org.apache.poi.util.XMLHelper
+import org.apache.poi.xssf.eventusermodel.ReadOnlySharedStringsTable
+import org.apache.poi.xssf.eventusermodel.XSSFReader
+import org.apache.poi.xssf.eventusermodel.XSSFSheetXMLHandler
+import org.apache.poi.xssf.model.StylesTable
+import org.apache.poi.xssf.usermodel.XSSFComment
 import org.apache.tika.Tika
 import org.apache.tika.metadata.Metadata
 import org.apache.tika.mime.MediaType
@@ -16,14 +23,20 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import org.xml.sax.InputSource
+import org.xml.sax.SAXException
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.charset.Charset
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import java.util.zip.ZipInputStream
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.outputStream
 
 
 private val LOGGER: Logger = LoggerFactory.getLogger(PreviewService::class.java)
@@ -43,7 +56,10 @@ class PreviewService(
         const val NO_DELIMITER = '\u0000' //empty char
         const val DEFAULT_ROWS = 100
         const val MAX_ROWS = 1000
+        const val MAX_COLUMNS = 100
     }
+
+    private class SheetParseLimitReached : SAXException("Sheet parse row limit reached")
 
     private fun readFromStream(stream: InputStream, length: Int): ByteArray {
         val bytes = ByteArray(length)
@@ -95,7 +111,8 @@ class PreviewService(
 
         try {
             return downloader.download(resourceUrl, { body ->
-                if(body.contentLength() > maxFileSizeBytes) {
+                val contentLength = body.contentLength()
+                if (contentLength > maxFileSizeBytes) {
                     throw PreviewException("File is too large to process")
                 }
 
@@ -149,7 +166,7 @@ class PreviewService(
             var zipEntry = zis.nextEntry
             while (zipEntry != null) {
                 if (!zipEntry.isDirectory && isSupportedFile(zipEntry.name)) {
-                    if(zipEntry.size > maxFileSizeBytes) {
+                    if (zipEntry.size > maxFileSizeBytes) {
                         throw PreviewException("File is too large to process")
                     }
 
@@ -191,10 +208,15 @@ class PreviewService(
     }
 
     private fun ZipInputStream.toByteArrayInputStream(): ByteArrayInputStream {
-        val buffer = ByteArray(1024)
+        val buffer = ByteArray(8192)
         val bos = ByteArrayOutputStream()
+        var total = 0L
         var len: Int
         while (read(buffer).also { len = it } > 0) {
+            total += len
+            if (total > maxFileSizeBytes) {
+                throw PreviewException("File is too large to process")
+            }
             bos.write(buffer, 0, len)
         }
         bos.close()
@@ -211,82 +233,162 @@ class PreviewService(
     private fun xlsxPreview(rows: Int?, inputStream: InputStream): Preview {
         logDebug("Parsing Excel")
 
-        val tableRows = arrayListOf<TableRow>()
-
-        // Create workbook with macro security disabled to prevent malicious code execution
-        val workbook: Workbook = XSSFWorkbook(inputStream).apply {
-            // Disable macro execution for security
-            this.creationHelper.createFormulaEvaluator().clearAllCachedResultValues()
-        }
-        
-        // Add timeout protection for processing
+        val maxRowsToProcess = getMaxNumberOfRows(rows) * 2
         val startTime = System.currentTimeMillis()
-        val formatter = DataFormatter()
-        val sheet = workbook.getSheetAt(0)
-
-        // Initialize a variable to track the last cell number in the sheet
+        val tableRows = arrayListOf<TableRow>()
         var lastCellNum = 0
 
-        // Iterate through each row in the sheet with timeout and memory protection
-        var rowCount = 0
-        val maxRowsToProcess = getMaxNumberOfRows(rows) * 2 // Allow some buffer for processing
-        
-        sheet.forEach { row ->
-            // Check processing timeout to prevent DoS attacks
-            if (System.currentTimeMillis() - startTime > maxProcessingTimeSeconds * 1000) {
-                throw PreviewException("File processing timeout exceeded")
-            }
-            
-            // Limit rows to prevent memory exhaustion
-            if (rowCount >= maxRowsToProcess) {
-                logDebug("Excel processing limited to $maxRowsToProcess rows for security")
-                return@forEach
-            }
-            
-            // Map the row's cells to a list of formatted cell values and create a TableRow object
-            val tableRow = TableRow(row.map {
-                val cellValue = formatter.formatCellValue(it) // Format the cell value for consistent representation
-                ContentSanitizer.sanitizeCellContent(cellValue) // Sanitize to prevent XSS attacks
-            })
+        val tempFile = inputStream.copyToTempFile(maxFileSizeBytes)
+        try {
+            OPCPackage.open(tempFile.toFile(), PackageAccess.READ).use { pkg ->
+                val sharedStrings = ReadOnlySharedStringsTable(pkg)
+                val reader = XSSFReader(pkg)
+                val styles: StylesTable? = try {
+                    reader.stylesTable
+                } catch (_: Exception) {
+                    null
+                }
+                val sheets = reader.sheetsData
+                if (!sheets.hasNext()) {
+                    throw PreviewException("Invalid Excel file content")
+                }
 
-            // Add the created TableRow to the list of table rows
-            tableRows.add(tableRow)
-            rowCount++
+                sheets.next().use { sheetStream ->
+                    val sheetHandler = object : XSSFSheetXMLHandler.SheetContentsHandler {
+                        private var currentRow = arrayListOf<String>()
 
-            // Update the lastCellNum based on the current row's last cell number
-            lastCellNum = when {
-                row.lastCellNum <= lastCellNum -> lastCellNum // Keep the current lastCellNum if it's greater
-                formatter.formatCellValue(row.last()).isNotEmpty() -> row.physicalNumberOfCells // Update if the last cell is not empty
-                else -> lastCellNum // Otherwise, retain the current lastCellNum
+                        override fun startRow(rowNum: Int) {
+                            if (System.currentTimeMillis() - startTime > maxProcessingTimeSeconds * 1000) {
+                                throw PreviewException("File processing timeout exceeded")
+                            }
+                            if (tableRows.size >= maxRowsToProcess) {
+                                logDebug("Excel processing limited to $maxRowsToProcess rows for security")
+                                throw SheetParseLimitReached()
+                            }
+                            currentRow = arrayListOf()
+                        }
+
+                        override fun endRow(rowNum: Int) {
+                            if (currentRow.size > MAX_COLUMNS) {
+                                currentRow = ArrayList(currentRow.subList(0, MAX_COLUMNS))
+                            }
+
+                            lastCellNum = when {
+                                currentRow.size <= lastCellNum -> lastCellNum
+                                currentRow.lastOrNull()?.isNotEmpty() == true -> currentRow.size
+                                else -> lastCellNum
+                            }
+
+                            tableRows.add(TableRow(currentRow.toList()))
+                        }
+
+                        override fun cell(cellReference: String?, formattedValue: String?, comment: XSSFComment?) {
+                            if (cellReference == null) return
+                            val col = CellReference(cellReference).col.toInt()
+                            if (col < 0 || col >= MAX_COLUMNS) return
+
+                            while (currentRow.size <= col) {
+                                currentRow.add("")
+                            }
+                            currentRow[col] = ContentSanitizer.sanitizeCellContent(formattedValue ?: "")
+                        }
+                    }
+
+                    val formatter = DataFormatter()
+                    val xmlHandler = XSSFSheetXMLHandler(
+                        styles,
+                        sharedStrings,
+                        sheetHandler,
+                        formatter,
+                        false
+                    )
+                    val xmlReader = XMLHelper.newXMLReader()
+                    xmlReader.contentHandler = xmlHandler
+                    try {
+                        xmlReader.parse(InputSource(sheetStream))
+                    } catch (e: Exception) {
+                        when (val root = e.unwrapCause()) {
+                            is SheetParseLimitReached -> {
+                                // Expected once we have enough preview rows
+                            }
+                            is PreviewException -> throw root
+                            else -> throw e
+                        }
+                    }
+                }
             }
+        } catch (e: PreviewException) {
+            throw e
+        } catch (e: Exception) {
+            when (val root = e.unwrapCause()) {
+                is PreviewException -> throw root
+                else -> {
+                    logDebug("Failed to parse Excel", e)
+                    throw PreviewException("Failed to parse Excel file")
+                }
+            }
+        } finally {
+            tempFile.deleteIfExists()
         }
 
-        // Find the index of the header row based on the number of columns and non-empty last column
-        val headerIndex = tableRows.indexOfFirst {
-            it.columns.size == lastCellNum && it.columns[lastCellNum - 1].isNotEmpty()
+        if (tableRows.isEmpty()) {
+            throw PreviewException("Invalid Excel file content")
         }
 
-        // Determine the starting index of the header row
+        val headerIndex = if (lastCellNum > 0) {
+            tableRows.indexOfFirst {
+                it.columns.size == lastCellNum && it.columns[lastCellNum - 1].isNotEmpty()
+            }
+        } else {
+            -1
+        }
+
         val startHeaderIndex = if (headerIndex == -1) 0 else headerIndex
-
-        // Calculate the ending index of the header row (exclusive)
         val endHeaderIndex = startHeaderIndex + 1
-
-        // Calculate the ending index for the rows to be included in the table
         val endRowsIndex =
             if (endHeaderIndex + getMaxNumberOfRows(rows) <= tableRows.size - 1)
-                endHeaderIndex + getMaxNumberOfRows(rows) // Limit rows to the maximum allowed
+                endHeaderIndex + getMaxNumberOfRows(rows)
             else
-                tableRows.size - 1 // Include all rows if the limit exceeds the total rows
+                tableRows.size - 1
 
-        // Extract the header row from the table rows and create a TableHeader object
         val header = TableHeader(tableRows.subList(startHeaderIndex, endHeaderIndex)[0].columns)
-
-        // Beautify the header for better readability or formatting
         header.beautify()
 
         val table = Table(header, tableRows.subList(endHeaderIndex, endRowsIndex))
-        return Preview(table=table, plain = null)
+        return Preview(table = table, plain = null)
+    }
+
+    private fun InputStream.copyToTempFile(maxBytes: Long): Path {
+        val tempFile = Files.createTempFile("fdk-preview-", ".xlsx")
+        try {
+            tempFile.outputStream().use { out ->
+                val buffer = ByteArray(8192)
+                var total = 0L
+                var read: Int
+                while (read(buffer).also { read = it } != -1) {
+                    total += read
+                    if (total > maxBytes) {
+                        throw PreviewException("File is too large to process")
+                    }
+                    out.write(buffer, 0, read)
+                }
+            }
+            return tempFile
+        } catch (e: Exception) {
+            tempFile.deleteIfExists()
+            throw e
+        }
+    }
+
+    private fun Throwable.unwrapCause(): Throwable {
+        var current: Throwable = this
+        while (current.cause != null && current.cause !== current) {
+            when (current) {
+                is PreviewException, is SheetParseLimitReached -> return current
+                else -> current = current.cause!!
+            }
+        }
+        return current
     }
 
     private fun csvPreview(rows: Int?, inputStream: InputStream, secondInputStream: InputStream?, charset: Charset?): Preview {
