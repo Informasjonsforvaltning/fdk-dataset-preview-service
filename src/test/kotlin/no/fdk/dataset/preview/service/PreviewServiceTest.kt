@@ -113,6 +113,27 @@ class PreviewServiceTest {
     }
 
     @Test
+    fun test_if_oversized_xlsx_is_rejected() {
+        val responseBody: ResponseBody = mock()
+        whenever(responseBody.byteStream()).thenReturn(
+            javaClass.classLoader.getResourceAsStream("test.xlsx"))
+        whenever(responseBody.contentLength()).thenReturn(20_000_000)
+        whenever(responseBody.contentType()).thenReturn(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".toMediaTypeOrNull())
+
+        val resourceUrl = "http://domain.com/large.xlsx"
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
+
+        val exception = Assertions.assertThrows(PreviewException::class.java) {
+            previewService.readAndParseResource(resourceUrl, 10)
+        }
+        Assertions.assertEquals("File is too large to process", exception.message)
+    }
+
+    @Test
     fun test_if_resource_parses_as_valid_plain() {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(
