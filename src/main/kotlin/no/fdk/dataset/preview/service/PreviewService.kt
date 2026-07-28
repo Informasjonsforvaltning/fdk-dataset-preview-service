@@ -67,6 +67,63 @@ class PreviewService(
 
     private class SheetParseLimitReached : SAXException("Sheet parse row limit reached")
 
+    private enum class PreviewFormat {
+        ZIP,
+        XLSX,
+        XLS,
+        CSV,
+        PLAIN,
+        ;
+
+        companion object {
+            fun detect(
+                contentType: String?,
+                resourceName: String,
+            ): PreviewFormat? =
+                when {
+                    isZipContentType(contentType) -> ZIP
+                    isXlsxContentType(contentType) || resourceName.hasExtension(".xlsx") -> XLSX
+                    resourceName.hasExtension(".xls") -> XLS
+                    isCsvContentType(contentType) || resourceName.hasExtension(".csv") -> CSV
+                    isPlainContentType(contentType) || resourceName.hasExtension(".xml", ".json") -> PLAIN
+                    else -> null
+                }
+
+            fun fromFileName(fileName: String): PreviewFormat? =
+                when {
+                    fileName.hasExtension(".xlsx") -> XLSX
+                    fileName.hasExtension(".xls") -> XLS
+                    fileName.hasExtension(".csv") -> CSV
+                    fileName.hasExtension(".xml", ".json") -> PLAIN
+                    else -> null
+                }
+
+            private fun isZipContentType(contentType: String?): Boolean = contentType == "application/zip"
+
+            private fun isXlsxContentType(contentType: String?): Boolean =
+                contentType != null &&
+                    """application/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet"""
+                        .toRegex()
+                        .containsMatchIn(contentType)
+
+            private fun isCsvContentType(contentType: String?): Boolean =
+                contentType != null &&
+                    (
+                        """\+?csv""".toRegex().containsMatchIn(contentType) ||
+                            """\+?vnd\.ms-excel""".toRegex().containsMatchIn(contentType)
+                    )
+
+            private fun isPlainContentType(contentType: String?): Boolean =
+                contentType != null &&
+                    (
+                        """\+?xml""".toRegex().containsMatchIn(contentType) ||
+                            """\+?json""".toRegex().containsMatchIn(contentType)
+                    )
+
+            private fun String.hasExtension(vararg extensions: String): Boolean = extensions.any { endsWith(it) }
+        }
+    }
+
     private fun readFromStream(
         stream: InputStream,
         length: Int,
@@ -130,51 +187,29 @@ class PreviewService(
                 }
 
                 body.byteStream().use { inputStream ->
-                    when {
-                        isZip(body.contentType().toString()) -> {
-                            zipPreview(
-                                rows,
-                                inputStream,
+                    when (PreviewFormat.detect(body.contentType().toString(), resourceUrl)) {
+                        PreviewFormat.ZIP -> {
+                            zipPreview(rows, inputStream)
+                        }
+
+                        PreviewFormat.XLSX -> {
+                            xlsxPreview(rows, inputStream)
+                        }
+
+                        PreviewFormat.XLS -> {
+                            xlsPreview(rows, inputStream)
+                        }
+
+                        PreviewFormat.CSV -> {
+                            csvPreviewFromResource(
+                                resourceUrl = resourceUrl,
+                                rows = rows,
+                                inputStream = inputStream,
+                                charset = body.contentType()?.charset(),
                             )
                         }
 
-                        isXlsx(body.contentType().toString()) || isXlsxFile(resourceUrl) -> {
-                            xlsxPreview(
-                                rows,
-                                inputStream,
-                            )
-                        }
-
-                        isXlsFile(resourceUrl) -> {
-                            xlsPreview(
-                                rows,
-                                inputStream,
-                            )
-                        }
-
-                        isCsv(body.contentType().toString()) || isCsvFile(resourceUrl) -> {
-                            if (!inputStream.markSupported()) {
-                                downloader.download(resourceUrl, { secondBody ->
-                                    secondBody.byteStream().use { secondInputStream ->
-                                        csvPreview(
-                                            rows,
-                                            inputStream,
-                                            secondInputStream,
-                                            body.contentType()?.charset(),
-                                        )
-                                    }
-                                })
-                            } else {
-                                csvPreview(
-                                    rows,
-                                    inputStream,
-                                    null,
-                                    body.contentType()?.charset(),
-                                )
-                            }
-                        }
-
-                        isPlain(body.contentType().toString()) || isPlainFile(resourceUrl) -> {
+                        PreviewFormat.PLAIN -> {
                             plainPreview(
                                 inputStream,
                                 body.contentType().toString(),
@@ -182,7 +217,7 @@ class PreviewService(
                             )
                         }
 
-                        else -> {
+                        null -> {
                             throw PreviewException("Unsupported file format", ErrorType.UNSUPPORTED_FORMAT)
                         }
                     }
@@ -205,34 +240,50 @@ class PreviewService(
         try {
             var zipEntry = zis.nextEntry
             while (zipEntry != null) {
-                if (!zipEntry.isDirectory && isSupportedFile(zipEntry.name)) {
+                val entryFormat =
+                    if (zipEntry.isDirectory) {
+                        null
+                    } else {
+                        PreviewFormat.fromFileName(zipEntry.name)
+                    }
+
+                if (entryFormat != null) {
                     if (zipEntry.size > maxFileSizeBytes) {
                         throw PreviewException("File is too large to process", ErrorType.FILE_TOO_LARGE)
                     }
 
-                    if (isXlsxFile(zipEntry.name)) {
-                        return xlsxPreview(rows, zis)
-                    }
-                    if (isXlsFile(zipEntry.name)) {
-                        return xlsPreview(rows, zis)
-                    }
-                    if (isCsvFile(zipEntry.name)) {
-                        val bis = zis.toByteArrayInputStream()
-                        return csvPreview(
-                            rows,
-                            bis,
-                            null,
-                            bis.getMediaType().getCharset(),
-                        )
-                    }
-                    if (isPlainFile(zipEntry.name)) {
-                        val bis = zis.toByteArrayInputStream()
-                        val mediaType = bis.getMediaType()
-                        return plainPreview(
-                            bis,
-                            mediaType.toString(),
-                            mediaType.getCharset(),
-                        )
+                    when (entryFormat) {
+                        PreviewFormat.XLSX -> {
+                            return xlsxPreview(rows, zis)
+                        }
+
+                        PreviewFormat.XLS -> {
+                            return xlsPreview(rows, zis)
+                        }
+
+                        PreviewFormat.CSV -> {
+                            val bis = zis.toByteArrayInputStream()
+                            return csvPreview(
+                                rows,
+                                bis,
+                                null,
+                                bis.getMediaType().getCharset(),
+                            )
+                        }
+
+                        PreviewFormat.PLAIN -> {
+                            val bis = zis.toByteArrayInputStream()
+                            val mediaType = bis.getMediaType()
+                            return plainPreview(
+                                bis,
+                                mediaType.toString(),
+                                mediaType.getCharset(),
+                            )
+                        }
+
+                        PreviewFormat.ZIP -> {
+                            // Zip entries are only considered when they contain previewable files.
+                        }
                     }
                 }
                 zipEntry = zis.nextEntry
@@ -534,6 +585,32 @@ class PreviewService(
         return current
     }
 
+    private fun csvPreviewFromResource(
+        resourceUrl: String,
+        rows: Int?,
+        inputStream: InputStream,
+        charset: Charset?,
+    ): Preview =
+        if (!inputStream.markSupported()) {
+            downloader.download(resourceUrl) { secondBody ->
+                secondBody.byteStream().use { secondInputStream ->
+                    csvPreview(
+                        rows,
+                        inputStream,
+                        secondInputStream,
+                        charset,
+                    )
+                }
+            }
+        } else {
+            csvPreview(
+                rows,
+                inputStream,
+                null,
+                charset,
+            )
+        }
+
     private fun csvPreview(
         rows: Int?,
         inputStream: InputStream,
@@ -602,74 +679,6 @@ class PreviewService(
 
         return Table(tableHeader, tableRows)
     }
-
-    private fun isZip(mediaType: String?): Boolean =
-        when (mediaType) {
-            null -> false
-            "application/zip" -> true
-            else -> false
-        }
-
-    private fun isXlsx(mediaType: String?): Boolean =
-        when {
-            mediaType == null -> false
-
-            """application/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet"""
-                .toRegex()
-                .containsMatchIn(mediaType) -> true
-
-            else -> false
-        }
-
-    private fun isCsv(mediaType: String?): Boolean =
-        when {
-            mediaType == null -> false
-            """\+?csv""".toRegex().containsMatchIn(mediaType) -> true
-            """\+?vnd\.ms-excel""".toRegex().containsMatchIn(mediaType) -> true
-            else -> false
-        }
-
-    private fun isPlain(mediaType: String?): Boolean =
-        when {
-            mediaType == null -> false
-            """\+?xml""".toRegex().containsMatchIn(mediaType) -> true
-            """\+?json""".toRegex().containsMatchIn(mediaType) -> true
-            else -> false
-        }
-
-    private fun isSupportedFile(fileName: String): Boolean =
-        when {
-            isXlsxFile(fileName) -> true
-            isXlsFile(fileName) -> true
-            isCsvFile(fileName) -> true
-            isPlainFile(fileName) -> true
-            else -> false
-        }
-
-    private fun isXlsxFile(fileName: String): Boolean =
-        when {
-            fileName.endsWith(".xlsx") -> true
-            else -> false
-        }
-
-    private fun isXlsFile(fileName: String): Boolean =
-        when {
-            fileName.endsWith(".xls") -> true
-            else -> false
-        }
-
-    private fun isCsvFile(fileName: String): Boolean =
-        when {
-            fileName.endsWith(".csv") -> true
-            else -> false
-        }
-
-    private fun isPlainFile(fileName: String): Boolean =
-        when {
-            fileName.endsWith(".xml") -> true
-            fileName.endsWith(".json") -> true
-            else -> false
-        }
 
     private fun logDebug(message: String) {
         logDebug(message, null)
