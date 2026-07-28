@@ -1,6 +1,8 @@
 package no.fdk.dataset.preview.service
 
+import no.fdk.dataset.preview.model.Plain
 import no.fdk.dataset.preview.model.Preview
+import no.fdk.dataset.preview.model.Table
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.ResponseBody
 import org.junit.jupiter.api.Assertions
@@ -16,93 +18,83 @@ class PreviewServiceTest {
     private val downloader: FileDownloader = mock()
     private val previewService = PreviewService(downloader)
 
-    @Test
-    fun test_if_csv_resource_parses_as_valid_table() {
+    private fun mockDownload(
+        resourceUrl: String,
+        contentType: String,
+        vararg resourceStreams: String,
+        contentLength: Long = 0,
+    ) {
         val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.csv"),
-            javaClass.classLoader.getResourceAsStream("test.csv"),
-        )
-        whenever(responseBody.contentType()).thenReturn("text/csv; charset=utf-8".toMediaTypeOrNull())
+        val streams = resourceStreams.map(::resourceStream).toTypedArray()
+        whenever(responseBody.byteStream()).thenReturn(streams.first(), *streams.drop(1).toTypedArray())
+        whenever(responseBody.contentType()).thenReturn(contentType.toMediaTypeOrNull())
+        whenever(responseBody.contentLength()).thenReturn(contentLength)
 
-        val resourceUrl = "http://domain.com/test.csv"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
             val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
             block(responseBody)
         }
+    }
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
-        val table = preview.table!!
+    private fun resourceStream(resourceName: String) = requireNotNull(javaClass.classLoader.getResourceAsStream(resourceName))
 
+    private fun resourceText(resourceName: String) =
+        requireNotNull(javaClass.classLoader.getResource(resourceName)).readText(Charsets.UTF_8)
+
+    private fun parsePreview(
+        resourceUrl: String,
+        rows: Int = 10,
+    ): Preview = previewService.readAndParseResource(resourceUrl, rows)
+
+    private fun assertCsvLikePreview(table: Table) {
         Assertions.assertEquals("Orgnr", table.header.columns[0])
         Assertions.assertEquals("Ull kg", table.header.columns[26])
         Assertions.assertEquals("981397290", table.rows[0].columns[0])
         Assertions.assertEquals("565.6", table.rows[6].columns[26])
+    }
+
+    private fun assertPlainPreview(
+        plain: Plain?,
+        expectedResource: String,
+        expectedContentType: String,
+    ) {
+        Assertions.assertEquals(resourceText(expectedResource), plain?.value)
+        Assertions.assertEquals(expectedContentType, plain?.contentType)
+    }
+
+    @Test
+    fun test_if_csv_resource_parses_as_valid_table() {
+        val resourceUrl = "http://domain.com/test.csv"
+        mockDownload(resourceUrl, "text/csv; charset=utf-8", "test.csv", "test.csv")
+
+        val preview = parsePreview(resourceUrl)
+        assertCsvLikePreview(preview.table!!)
     }
 
     @Test
     fun test_if_zip_resource_parses_as_valid_table() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.csv.zip"),
-            javaClass.classLoader.getResourceAsStream("test.csv.zip"),
-        )
-        whenever(responseBody.contentType()).thenReturn("application/zip".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/test.csv.zip"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "application/zip", "test.csv.zip", "test.csv.zip")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
-        val table = preview.table!!
-
-        Assertions.assertEquals("Orgnr", table.header.columns[0])
-        Assertions.assertEquals("Ull kg", table.header.columns[26])
-        Assertions.assertEquals("981397290", table.rows[0].columns[0])
-        Assertions.assertEquals("565.6", table.rows[6].columns[26])
+        val preview = parsePreview(resourceUrl)
+        assertCsvLikePreview(preview.table!!)
     }
 
     @Test
     fun test_if_msexcel_with_additional_chars_in_contenttype_resource_parses_as_valid_table() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.csv"),
-            javaClass.classLoader.getResourceAsStream("test.csv"),
-        )
-        whenever(responseBody.contentType()).thenReturn("application~/vnd.ms-excel~; charset=utf-8".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/test.csv"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "application~/vnd.ms-excel~; charset=utf-8", "test.csv", "test.csv")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
-        val table = preview.table!!
-
-        Assertions.assertEquals("Orgnr", table.header.columns[0])
-        Assertions.assertEquals("Ull kg", table.header.columns[26])
-        Assertions.assertEquals("981397290", table.rows[0].columns[0])
-        Assertions.assertEquals("565.6", table.rows[6].columns[26])
+        val preview = parsePreview(resourceUrl)
+        assertCsvLikePreview(preview.table!!)
     }
 
     @Test
     fun test_if_xlsx_resource_parses_as_valid_table() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xlsx"))
-        whenever(
-            responseBody.contentType(),
-        ).thenReturn("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/test.xlsx"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8", "test.xlsx")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val preview = parsePreview(resourceUrl)
         val table = preview.table!!
 
         Assertions.assertEquals("Ansvar:", table.header.columns[0])
@@ -113,17 +105,10 @@ class PreviewServiceTest {
 
     @Test
     fun test_if_xls_resource_parses_as_valid_table() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xls"))
-        whenever(responseBody.contentType()).thenReturn("application/octet-stream".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/test.xls"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "application/octet-stream", "test.xls")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val preview = parsePreview(resourceUrl)
         val table = preview.table!!
 
         Assertions.assertEquals("Id", table.header.columns[0])
@@ -139,17 +124,10 @@ class PreviewServiceTest {
 
     @Test
     fun test_if_xls_with_ms_excel_content_type_parses_as_valid_table() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xls"))
-        whenever(responseBody.contentType()).thenReturn("application/vnd.ms-excel".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/test.xls"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "application/vnd.ms-excel", "test.xls")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val preview = parsePreview(resourceUrl)
         val table = preview.table!!
 
         Assertions.assertEquals("Id", table.header.columns[0])
@@ -159,134 +137,67 @@ class PreviewServiceTest {
 
     @Test
     fun test_if_oversized_xlsx_is_rejected() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xlsx"))
-        whenever(responseBody.contentLength()).thenReturn(20_000_000)
-        whenever(
-            responseBody.contentType(),
-        ).thenReturn("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/large.xlsx"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(
+            resourceUrl,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "test.xlsx",
+            contentLength = 20_000_000,
+        )
 
         val exception =
             Assertions.assertThrows(PreviewException::class.java) {
-                previewService.readAndParseResource(resourceUrl, 10)
+                parsePreview(resourceUrl)
             }
         Assertions.assertEquals("File is too large to process", exception.message)
     }
 
     @Test
     fun test_if_resource_parses_as_valid_plain() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xml"))
-        whenever(responseBody.contentType()).thenReturn("application/xml; charset=utf-8".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/test.xml"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "application/xml; charset=utf-8", "test.xml")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
-        val table = preview.table
-        val resource = javaClass.classLoader.getResource("test.xml")!!
-
-        Assertions.assertNull(table)
-        Assertions.assertEquals(
-            resource
-                .readText(Charsets.UTF_8),
-            preview.plain?.value,
-        )
-        Assertions.assertEquals("application/xml; charset=utf-8", preview.plain?.contentType)
+        val preview = parsePreview(resourceUrl)
+        Assertions.assertNull(preview.table)
+        assertPlainPreview(preview.plain, "test.xml", "application/xml; charset=utf-8")
     }
 
     @Test
     fun test_if_resource_with_extended_xml_parses_as_valid_plain() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xml"))
-        whenever(responseBody.contentType()).thenReturn("application/3gpp-ims+xml; charset=utf-8".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/test.xml"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "application/3gpp-ims+xml; charset=utf-8", "test.xml")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
-        val table = preview.table
-        val resource = javaClass.classLoader.getResource("test.xml")!!
-
-        Assertions.assertNull(table)
-        Assertions.assertEquals(
-            resource
-                .readText(Charsets.UTF_8),
-            preview.plain?.value,
-        )
-        Assertions.assertEquals("application/3gpp-ims+xml; charset=utf-8", preview.plain?.contentType)
+        val preview = parsePreview(resourceUrl)
+        Assertions.assertNull(preview.table)
+        assertPlainPreview(preview.plain, "test.xml", "application/3gpp-ims+xml; charset=utf-8")
     }
 
     @Test
     fun test_if_resource_with_extended_json_parses_as_valid_plain() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.json"))
-        whenever(responseBody.contentType()).thenReturn("application/alto-costmap+json; charset=utf-8".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/test.json"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "application/alto-costmap+json; charset=utf-8", "test.json")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
-        val table = preview.table
-        val resource = javaClass.classLoader.getResource("test.json")!!
-
-        Assertions.assertNull(table)
-        Assertions.assertEquals(
-            resource
-                .readText(Charsets.UTF_8),
-            preview.plain?.value,
-        )
-        Assertions.assertEquals("application/alto-costmap+json; charset=utf-8", preview.plain?.contentType)
+        val preview = parsePreview(resourceUrl)
+        Assertions.assertNull(preview.table)
+        assertPlainPreview(preview.plain, "test.json", "application/alto-costmap+json; charset=utf-8")
     }
 
     @Test
     fun test_if_resource_parses_as_invalid_content_type() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xml"))
-        whenever(responseBody.contentType()).thenReturn("text/turtle; charset=utf-8".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/test.ttl"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "text/turtle; charset=utf-8", "test.xml")
 
         Assertions.assertThrows(Exception::class.java) {
-            previewService.readAndParseResource(resourceUrl, 10)
+            parsePreview(resourceUrl)
         }
     }
 
     @Test
     fun test_if_parser_handles_iso_charset() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("iso-charset.csv"),
-            javaClass.classLoader.getResourceAsStream("iso-charset.csv"),
-        )
-        whenever(responseBody.contentType()).thenReturn("text/csv; charset=iso-8859-1".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/iso-charset.csv"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "text/csv; charset=iso-8859-1", "iso-charset.csv", "iso-charset.csv")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val preview = parsePreview(resourceUrl)
         val table = preview.table!!
 
         Assertions.assertEquals("Orgnr", table.header.columns[0])
@@ -296,20 +207,10 @@ class PreviewServiceTest {
 
     @Test
     fun test_if_parser_handles_utf8_charset() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("utf8-charset.csv"),
-            javaClass.classLoader.getResourceAsStream("utf8-charset.csv"),
-        )
-        whenever(responseBody.contentType()).thenReturn("text/csv; charset=utf-8".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/utf8-charset.csv"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "text/csv; charset=utf-8", "utf8-charset.csv", "utf8-charset.csv")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val preview = parsePreview(resourceUrl)
         val table = preview.table!!
 
         Assertions.assertEquals("Orgnr", table.header.columns[0])
@@ -319,20 +220,10 @@ class PreviewServiceTest {
 
     @Test
     fun test_if_parser_handles_utf16_charset() {
-        val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("utf16-charset.csv"),
-            javaClass.classLoader.getResourceAsStream("utf16-charset.csv"),
-        )
-        whenever(responseBody.contentType()).thenReturn("text/csv; charset=utf-16".toMediaTypeOrNull())
-
         val resourceUrl = "http://domain.com/utf16-charset.csv"
-        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
-            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
-            block(responseBody)
-        }
+        mockDownload(resourceUrl, "text/csv; charset=utf-16", "utf16-charset.csv", "utf16-charset.csv")
 
-        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val preview = parsePreview(resourceUrl)
         val table = preview.table!!
 
         Assertions.assertEquals("Orgnr", table.header.columns[0])
