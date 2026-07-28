@@ -13,42 +13,84 @@ import java.util.concurrent.TimeUnit
 private val dnsCache = ConcurrentHashMap<String, List<String>>()
 private val dnsCacheExpiry = ConcurrentHashMap<String, Long>()
 private const val DNS_CACHE_TTL_SECONDS = 300L // 5 minutes
+private val ALLOWED_SCHEMES = setOf("https")
+private const val DEFAULT_HTTPS_PORT = 443
+private val SUSPICIOUS_HOST_PATTERNS =
+    listOf(
+        "localhost",
+        "127.",
+        "0.0.0.0",
+        "169.254.",
+        "metadata",
+        "instance-data",
+        "169.254.169.254", // AWS, Google Cloud, and Azure metadata
+        "100.100.100.200", // Alibaba Cloud metadata
+        "192.0.0.192", // Oracle Cloud metadata
+    )
+private val KUBERNETES_HOST_PATTERNS =
+    listOf(
+        "kubernetes.default.svc",
+        ".svc.cluster.local",
+    )
+private val HOSTNAME_REGEX =
+    Regex(
+        "^[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?(\\.([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?))*$",
+    )
 
 fun URI.validate() {
     val host = this.host ?: throw UrlException("Invalid URL format")
     val scheme = this.scheme?.lowercase() ?: throw UrlException("Invalid URL format")
-    val port = this.port
+    requireAllowedScheme(scheme)
+    requireAllowedPort(this.port)
+    requireValidHostname(host)
+    requireNoSuspiciousHostPatterns(host)
+    requireNoKubernetesHostPatterns(host)
 
-    // Enhanced scheme validation
-    if (scheme !in listOf("https")) {
+    val resolvedIps = resolveHostIPsWithCache(host)
+    requireNoPrivateOrInternalIps(resolvedIps)
+    requireStableDnsResolution(host, resolvedIps)
+}
+
+private fun requireAllowedScheme(scheme: String) {
+    if (scheme !in ALLOWED_SCHEMES) {
         throw UrlException("Unsafe URL scheme not allowed")
     }
+}
 
-    // Port validation - only allow standard HTTPS port
-    if (port != -1 && port != 443) {
+private fun requireAllowedPort(port: Int) {
+    if (port != -1 && port != DEFAULT_HTTPS_PORT) {
         throw UrlException("Non-standard port not allowed")
     }
+}
 
-    // Hostname validation
+private fun requireValidHostname(host: String) {
     if (!isValidHostname(host)) {
         throw UrlException("Invalid hostname format")
     }
+}
 
-    // Check for suspicious patterns
+private fun requireNoSuspiciousHostPatterns(host: String) {
     if (containsSuspiciousPatterns(host)) {
         throw UrlException("Suspicious hostname pattern not allowed")
     }
+}
 
-    if (isKubernetes(host)) {
+private fun requireNoKubernetesHostPatterns(host: String) {
+    if (isKubernetesHost(host)) {
         throw UrlException("Internal service access not allowed")
     }
+}
 
-    val resolvedIps = resolveHostIPsWithCache(host)
+private fun requireNoPrivateOrInternalIps(resolvedIps: List<String>) {
     if (resolvedIps.any { isPrivateOrInternal(it) }) {
         throw UrlException("Internal network access not allowed")
     }
+}
 
-    // Double-check DNS resolution to prevent rebinding attacks
+private fun requireStableDnsResolution(
+    host: String,
+    resolvedIps: List<String>,
+) {
     val recheckIps = resolveHostIPsWithCache(host)
     if (resolvedIps.toSet() != recheckIps.toSet()) {
         throw UrlException("DNS rebinding attack detected")
@@ -86,9 +128,7 @@ private fun isValidHostname(hostname: String): Boolean {
         return isValidIPv6(ipv6Content)
     }
 
-    // Check for valid hostname pattern (domain names)
-    val hostnameRegex = Regex("^[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?(\\.([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?))*$")
-    return hostnameRegex.matches(hostname)
+    return HOSTNAME_REGEX.matches(hostname)
 }
 
 private fun isValidIPv6(ipv6: String): Boolean =
@@ -98,30 +138,10 @@ private fun isValidIPv6(ipv6: String): Boolean =
         false
     }
 
-private fun containsSuspiciousPatterns(hostname: String): Boolean {
-    val suspiciousPatterns =
-        listOf(
-            "localhost",
-            "127.",
-            "0.0.0.0",
-            "169.254.",
-            "metadata",
-            "instance-data",
-            "169.254.169.254", // AWS metadata service
-            "100.100.100.200", // Alibaba Cloud metadata
-            "192.0.0.192", // Oracle Cloud metadata
-            "169.254.169.254", // Google Cloud metadata
-            "169.254.169.254", // Azure metadata
-        )
+private fun containsSuspiciousPatterns(hostname: String): Boolean =
+    SUSPICIOUS_HOST_PATTERNS.any { hostname.contains(it, ignoreCase = true) }
 
-    return suspiciousPatterns.any { hostname.contains(it, ignoreCase = true) }
-}
-
-private fun isKubernetes(host: String): Boolean =
-    listOf(
-        "kubernetes.default.svc",
-        ".svc.cluster.local",
-    ).any { host.contains(it, ignoreCase = true) }
+private fun isKubernetesHost(host: String): Boolean = KUBERNETES_HOST_PATTERNS.any { host.contains(it, ignoreCase = true) }
 
 private fun isPrivateOrInternal(ip: String): Boolean {
     val address = InetAddress.getByName(ip)
