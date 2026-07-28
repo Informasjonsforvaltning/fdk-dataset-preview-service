@@ -84,6 +84,41 @@ class PreviewContractTest : ApiTestContext() {
     }
 
     @Test
+    fun ok_xls() {
+        val previewRequest = PreviewRequest("http://localhost:5050/download/test.xls", 10)
+        val rsp = authorizedRequest(
+            "/preview", port, mapper.writeValueAsString(previewRequest),
+            "my-api-key", HttpMethod.POST
+        )
+        assertEquals(HttpStatus.OK.value(), rsp["status"])
+
+        val preview = mapper.readValue("${rsp["body"]}", Preview::class.java)
+        val table = preview.table!!
+        Assertions.assertEquals("Id", table.header.columns[0])
+        Assertions.assertEquals("Name", table.header.columns[1])
+        Assertions.assertEquals(3, table.rows.size)
+        Assertions.assertEquals("Alpha", table.rows[0].columns[1])
+        Assertions.assertEquals("300", table.rows[2].columns[2])
+        assertNull(preview.plain)
+    }
+
+    @Test
+    fun ok_xls_zip() {
+        val previewRequest = PreviewRequest("http://localhost:5050/download/xls-zip", 10)
+        val rsp = authorizedRequest(
+            "/preview", port, mapper.writeValueAsString(previewRequest),
+            "my-api-key", HttpMethod.POST
+        )
+        assertEquals(HttpStatus.OK.value(), rsp["status"])
+
+        val preview = mapper.readValue("${rsp["body"]}", Preview::class.java)
+        val table = preview.table!!
+        Assertions.assertEquals("Id", table.header.columns[0])
+        Assertions.assertEquals("Beta", table.rows[1].columns[1])
+        assertNull(preview.plain)
+    }
+
+    @Test
     fun ok_json_zip() {
         val previewRequest = PreviewRequest("http://localhost:5050/download/json-zip", 10)
         val rsp = authorizedRequest(
