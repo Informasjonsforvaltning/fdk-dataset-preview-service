@@ -9,6 +9,10 @@ import java.net.URI
 
 @Tag("unit")
 class UriValidatorTest {
+    private fun assertInvalidUrl(uri: String) {
+        assertThrows<UrlException> { URI(uri).validate() }
+    }
+
     @Test
     fun `valid https url`() {
         assertDoesNotThrow { URI("https://example.com").validate() }
@@ -16,26 +20,28 @@ class UriValidatorTest {
 
     @Test
     fun `http scheme blocked`() {
-        assertThrows<UrlException> { URI("http://example.com").validate() }
+        assertInvalidUrl("http://example.com")
     }
 
     @Test
     fun `invalid scheme`() {
-        assertThrows<UrlException> { URI("file:///etc/passwd").validate() }
+        assertInvalidUrl("file:///etc/passwd")
     }
 
     @Test
-    fun `private and internal throws exception`() {
-        assertThrows<UrlException> { URI("https://127.0.0.1").validate() }
-        assertThrows<UrlException> { URI("https://localhost").validate() }
-        assertThrows<UrlException> { URI("https://169.254.169.254").validate() }
-        assertThrows<UrlException> { URI("https://10.0.0.1").validate() }
-        assertThrows<UrlException> { URI("https://192.168.1.1").validate() }
-        assertThrows<UrlException> { URI("https://172.16.0.1").validate() }
-        assertThrows<UrlException> { URI("https://[fc00::1]").validate() }
-        assertThrows<UrlException> { URI("https://[fd12:3456:789a:1::1]").validate() }
-        assertThrows<UrlException> { URI("https://[::1]").validate() }
-        assertThrows<UrlException> { URI("https://[fe80::1]").validate() }
+    fun `private and internal addresses are blocked`() {
+        listOf(
+            "https://127.0.0.1",
+            "https://localhost",
+            "https://169.254.169.254",
+            "https://10.0.0.1",
+            "https://192.168.1.1",
+            "https://172.16.0.1",
+            "https://[fc00::1]",
+            "https://[fd12:3456:789a:1::1]",
+            "https://[::1]",
+            "https://[fe80::1]",
+        ).forEach(::assertInvalidUrl)
     }
 
     @Test
@@ -45,10 +51,12 @@ class UriValidatorTest {
     }
 
     @Test
-    fun kubernetes() {
-        assertThrows<UrlException> { URI("http://kubernetes.default.svc").validate() }
-        assertThrows<UrlException> { URI("http://internal-api.svc.cluster.local").validate() }
-        assertThrows<UrlException> { URI("https://kubernetes.default.svc").validate() }
-        assertThrows<UrlException> { URI("https://internal-api.svc.cluster.local").validate() }
+    fun `kubernetes service hosts are blocked`() {
+        listOf(
+            "http://kubernetes.default.svc",
+            "http://internal-api.svc.cluster.local",
+            "https://kubernetes.default.svc",
+            "https://internal-api.svc.cluster.local",
+        ).forEach(::assertInvalidUrl)
     }
 }
