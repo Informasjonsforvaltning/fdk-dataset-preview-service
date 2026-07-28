@@ -23,8 +23,7 @@ class GlobalExceptionHandlerTest {
         val exception = PreviewException("File is too large to process")
         val response = exceptionHandler.handlePreviewException(exception, request)
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val errorResponse = response.body as ErrorResponse
+        val errorResponse = assertErrorResponse(response, HttpStatus.BAD_REQUEST)
         assertEquals(ErrorType.FILE_TOO_LARGE.code, errorResponse.error)
         assertEquals(ErrorType.FILE_TOO_LARGE.message, errorResponse.message)
         assertNotNull(errorResponse.timestamp)
@@ -36,8 +35,7 @@ class GlobalExceptionHandlerTest {
         val exception = DownloadUrlException("Invalid URL format")
         val response = exceptionHandler.handleDownloadUrlException(exception, request)
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val errorResponse = response.body as ErrorResponse
+        val errorResponse = assertErrorResponse(response, HttpStatus.BAD_REQUEST)
         assertEquals(ErrorType.DOWNLOAD_FAILED.code, errorResponse.error)
         assertEquals(ErrorType.DOWNLOAD_FAILED.message, errorResponse.message)
     }
@@ -47,8 +45,7 @@ class GlobalExceptionHandlerTest {
         val exception = DownloadException("Download failed")
         val response = exceptionHandler.handleDownloadException(exception, request)
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val errorResponse = response.body as ErrorResponse
+        val errorResponse = assertErrorResponse(response, HttpStatus.BAD_REQUEST)
         assertEquals(ErrorType.DOWNLOAD_FAILED.code, errorResponse.error)
         assertEquals(ErrorType.DOWNLOAD_FAILED.message, errorResponse.message)
     }
@@ -58,8 +55,7 @@ class GlobalExceptionHandlerTest {
         val exception = UrlException("Unsafe URL scheme not allowed")
         val response = exceptionHandler.handleUrlException(exception, request)
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val errorResponse = response.body as ErrorResponse
+        val errorResponse = assertErrorResponse(response, HttpStatus.BAD_REQUEST)
         assertEquals(ErrorType.SECURITY_VIOLATION.code, errorResponse.error)
         assertEquals(ErrorType.SECURITY_VIOLATION.message, errorResponse.message)
     }
@@ -69,8 +65,7 @@ class GlobalExceptionHandlerTest {
         val exception = RuntimeException("Unexpected error")
         val response = exceptionHandler.handleGenericException(exception, request)
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.statusCode)
-        val errorResponse = response.body as ErrorResponse
+        val errorResponse = assertErrorResponse(response, HttpStatus.INTERNAL_SERVER_ERROR)
         assertEquals(ErrorType.INTERNAL_ERROR.code, errorResponse.error)
         assertEquals(ErrorType.INTERNAL_ERROR.message, errorResponse.message)
     }
@@ -80,11 +75,19 @@ class GlobalExceptionHandlerTest {
         val exception = PreviewException("File /sensitive/path/file.xlsx is too large (500MB, max: 10MB)")
         val response = exceptionHandler.handlePreviewException(exception, request)
 
-        val errorResponse = response.body as ErrorResponse
+        val errorResponse = assertErrorResponse(response, HttpStatus.BAD_REQUEST)
         // Should not contain file paths or specific sizes
         assertEquals(ErrorType.FILE_TOO_LARGE.message, errorResponse.message)
         assertEquals(false, errorResponse.message.contains("/sensitive/path"))
         assertEquals(false, errorResponse.message.contains("500MB"))
         assertEquals(false, errorResponse.message.contains("10MB"))
+    }
+
+    private fun assertErrorResponse(
+        response: org.springframework.http.ResponseEntity<ErrorResponse>,
+        expectedStatus: HttpStatus,
+    ): ErrorResponse {
+        assertEquals(expectedStatus, response.statusCode)
+        return requireNotNull(response.body)
     }
 }
