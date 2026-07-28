@@ -1,5 +1,6 @@
 package no.fdk.dataset.preview.service
 
+import no.fdk.dataset.preview.model.ErrorType
 import no.fdk.dataset.preview.model.Plain
 import no.fdk.dataset.preview.model.Preview
 import no.fdk.dataset.preview.model.Table
@@ -125,7 +126,7 @@ class PreviewService(
             return downloader.download(resourceUrl, { body ->
                 val contentLength = body.contentLength()
                 if (contentLength > maxFileSizeBytes) {
-                    throw PreviewException("File is too large to process")
+                    throw PreviewException("File is too large to process", ErrorType.FILE_TOO_LARGE)
                 }
 
                 body.byteStream().use { inputStream ->
@@ -182,14 +183,14 @@ class PreviewService(
                         }
 
                         else -> {
-                            throw PreviewException("Unsupported file format")
+                            throw PreviewException("Unsupported file format", ErrorType.UNSUPPORTED_FORMAT)
                         }
                     }
                 }
             })
         } catch (e: DownloadException) {
             logDebug("Unable to download resource $resourceUrl", e)
-            throw PreviewException("Failed to download file")
+            throw PreviewException("Failed to download file", ErrorType.DOWNLOAD_FAILED)
         }
     }
 
@@ -206,7 +207,7 @@ class PreviewService(
             while (zipEntry != null) {
                 if (!zipEntry.isDirectory && isSupportedFile(zipEntry.name)) {
                     if (zipEntry.size > maxFileSizeBytes) {
-                        throw PreviewException("File is too large to process")
+                        throw PreviewException("File is too large to process", ErrorType.FILE_TOO_LARGE)
                     }
 
                     if (isXlsxFile(zipEntry.name)) {
@@ -246,7 +247,7 @@ class PreviewService(
             zis.close()
         }
 
-        throw PreviewException("Invalid zip file content")
+        throw PreviewException("Invalid zip file content", ErrorType.PARSE_ERROR)
     }
 
     private fun ZipInputStream.toByteArrayInputStream(): ByteArrayInputStream {
@@ -257,7 +258,7 @@ class PreviewService(
         while (read(buffer).also { len = it } > 0) {
             total += len
             if (total > maxFileSizeBytes) {
-                throw PreviewException("File is too large to process")
+                throw PreviewException("File is too large to process", ErrorType.FILE_TOO_LARGE)
             }
             bos.write(buffer, 0, len)
         }
@@ -294,7 +295,7 @@ class PreviewService(
                     }
                 val sheets = reader.sheetsData
                 if (!sheets.hasNext()) {
-                    throw PreviewException("Invalid Excel file content")
+                    throw PreviewException("Invalid Excel file content", ErrorType.PARSE_ERROR)
                 }
 
                 sheets.next().use { sheetStream ->
@@ -304,7 +305,7 @@ class PreviewService(
 
                             override fun startRow(rowNum: Int) {
                                 if (System.currentTimeMillis() - startTime > maxProcessingTimeSeconds * 1000) {
-                                    throw PreviewException("File processing timeout exceeded")
+                                    throw PreviewException("File processing timeout exceeded", ErrorType.PROCESSING_TIMEOUT)
                                 }
                                 if (tableRows.size >= maxRowsToProcess) {
                                     logDebug("Excel processing limited to $maxRowsToProcess rows for security")
@@ -384,7 +385,7 @@ class PreviewService(
 
                 else -> {
                     logDebug("Failed to parse Excel", e)
-                    throw PreviewException("Failed to parse Excel file")
+                    throw PreviewException("Failed to parse Excel file", ErrorType.PARSE_ERROR)
                 }
             }
         } finally {
@@ -392,7 +393,7 @@ class PreviewService(
         }
 
         if (tableRows.isEmpty()) {
-            throw PreviewException("Invalid Excel file content")
+            throw PreviewException("Invalid Excel file content", ErrorType.PARSE_ERROR)
         }
 
         return buildExcelPreview(tableRows, lastCellNum, rows)
@@ -415,13 +416,13 @@ class PreviewService(
             FileInputStream(tempFile.toFile()).use { fileInputStream ->
                 HSSFWorkbook(fileInputStream).use { workbook ->
                     if (workbook.numberOfSheets == 0) {
-                        throw PreviewException("Invalid Excel file content")
+                        throw PreviewException("Invalid Excel file content", ErrorType.PARSE_ERROR)
                     }
 
                     val sheet = workbook.getSheetAt(0)
                     for (rowIndex in 0..sheet.lastRowNum) {
                         if (System.currentTimeMillis() - startTime > maxProcessingTimeSeconds * 1000) {
-                            throw PreviewException("File processing timeout exceeded")
+                            throw PreviewException("File processing timeout exceeded", ErrorType.PROCESSING_TIMEOUT)
                         }
                         if (tableRows.size >= maxRowsToProcess) {
                             logDebug("Excel processing limited to $maxRowsToProcess rows for security")
@@ -460,13 +461,13 @@ class PreviewService(
             throw e
         } catch (e: Exception) {
             logDebug("Failed to parse Excel", e)
-            throw PreviewException("Failed to parse Excel file")
+            throw PreviewException("Failed to parse Excel file", ErrorType.PARSE_ERROR)
         } finally {
             tempFile.deleteIfExists()
         }
 
         if (tableRows.isEmpty()) {
-            throw PreviewException("Invalid Excel file content")
+            throw PreviewException("Invalid Excel file content", ErrorType.PARSE_ERROR)
         }
 
         return buildExcelPreview(tableRows, lastCellNum, rows)
@@ -510,7 +511,7 @@ class PreviewService(
                 while (read(buffer).also { read = it } != -1) {
                     total += read
                     if (total > maxBytes) {
-                        throw PreviewException("File is too large to process")
+                        throw PreviewException("File is too large to process", ErrorType.FILE_TOO_LARGE)
                     }
                     out.write(buffer, 0, read)
                 }
