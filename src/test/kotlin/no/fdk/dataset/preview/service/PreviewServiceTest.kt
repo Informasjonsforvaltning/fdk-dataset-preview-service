@@ -16,7 +16,26 @@ import org.mockito.kotlin.whenever
 @Tag("unit")
 class PreviewServiceTest {
     private val downloader: FileDownloader = mock()
-    private val previewService = PreviewService(downloader)
+    private val limits = PreviewLimits()
+    private val csvPreviewParser = CsvPreviewParser(limits)
+    private val excelPreviewParser = ExcelPreviewParser(limits)
+    private val plainPreviewParser = PlainPreviewParser()
+    private val zipPreviewParser =
+        ZipPreviewParser(
+            limits,
+            excelPreviewParser,
+            csvPreviewParser,
+            plainPreviewParser,
+        )
+    private val previewService =
+        PreviewService(
+            downloader,
+            limits,
+            zipPreviewParser,
+            excelPreviewParser,
+            csvPreviewParser,
+            plainPreviewParser,
+        )
 
     private fun mockDownload(
         resourceUrl: String,
