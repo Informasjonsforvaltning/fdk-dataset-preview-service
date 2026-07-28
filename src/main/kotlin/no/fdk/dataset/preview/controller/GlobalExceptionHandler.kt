@@ -35,17 +35,7 @@ class GlobalExceptionHandler {
         request: jakarta.servlet.http.HttpServletRequest,
     ): ResponseEntity<ErrorResponse> {
         logger.warn("Preview processing failed: ${ex.message}", ex)
-
-        val errorType =
-            when {
-                ex.message?.contains("timeout", ignoreCase = true) == true -> ErrorType.PROCESSING_TIMEOUT
-                ex.message?.contains("too large", ignoreCase = true) == true -> ErrorType.FILE_TOO_LARGE
-                ex.message?.contains("invalid content type", ignoreCase = true) == true -> ErrorType.UNSUPPORTED_FORMAT
-                ex.message?.contains("parse", ignoreCase = true) == true -> ErrorType.PARSE_ERROR
-                else -> ErrorType.INTERNAL_ERROR
-            }
-
-        return errorResponse(HttpStatus.BAD_REQUEST, errorType, request)
+        return errorResponse(HttpStatus.BAD_REQUEST, ex.errorType, request)
     }
 
     @ExceptionHandler(DownloadUrlException::class)

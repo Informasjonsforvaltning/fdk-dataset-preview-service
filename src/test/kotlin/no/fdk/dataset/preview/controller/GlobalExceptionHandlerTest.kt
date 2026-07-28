@@ -20,7 +20,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     fun `handlePreviewException should return standardized error response`() {
-        val exception = PreviewException("File is too large to process")
+        val exception = PreviewException("File is too large to process", ErrorType.FILE_TOO_LARGE)
         val response = exceptionHandler.handlePreviewException(exception, request)
 
         val errorResponse = assertErrorResponse(response, HttpStatus.BAD_REQUEST)
@@ -72,7 +72,11 @@ class GlobalExceptionHandlerTest {
 
     @Test
     fun `error response should not contain sensitive information`() {
-        val exception = PreviewException("File /sensitive/path/file.xlsx is too large (500MB, max: 10MB)")
+        val exception =
+            PreviewException(
+                "File /sensitive/path/file.xlsx is too large (500MB, max: 10MB)",
+                ErrorType.FILE_TOO_LARGE,
+            )
         val response = exceptionHandler.handlePreviewException(exception, request)
 
         val errorResponse = assertErrorResponse(response, HttpStatus.BAD_REQUEST)
@@ -89,5 +93,16 @@ class GlobalExceptionHandlerTest {
     ): ErrorResponse {
         assertEquals(expectedStatus, response.statusCode)
         return requireNotNull(response.body)
+    }
+
+    @Test
+    fun `handlePreviewException should use explicit error type instead of message matching`() {
+        val exception = PreviewException("Some custom message", ErrorType.PARSE_ERROR)
+
+        val response = exceptionHandler.handlePreviewException(exception, request)
+
+        val errorResponse = assertErrorResponse(response, HttpStatus.BAD_REQUEST)
+        assertEquals(ErrorType.PARSE_ERROR.code, errorResponse.error)
+        assertEquals(ErrorType.PARSE_ERROR.message, errorResponse.message)
     }
 }
