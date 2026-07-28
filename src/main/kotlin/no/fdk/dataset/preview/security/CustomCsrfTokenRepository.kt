@@ -15,7 +15,7 @@ import org.springframework.security.web.csrf.DefaultCsrfToken
 import org.springframework.util.Assert
 import org.springframework.util.StringUtils
 import org.springframework.web.util.WebUtils
-import java.util.*
+import java.util.UUID
 
 class CustomCsrfTokenRepository : CsrfTokenRepository {
     private var parameterName = "_csrf"
@@ -26,20 +26,24 @@ class CustomCsrfTokenRepository : CsrfTokenRepository {
     private var allowedOrigins: List<String>? = null
     private var secure: Boolean? = null
     private var cookieMaxAge = -1L
-    override fun generateToken(request: HttpServletRequest): CsrfToken {
-        return DefaultCsrfToken(headerName, parameterName, createNewToken())
-    }
 
-    override fun saveToken(token: CsrfToken?, request: HttpServletRequest, response: HttpServletResponse) {
+    override fun generateToken(request: HttpServletRequest): CsrfToken = DefaultCsrfToken(headerName, parameterName, createNewToken())
+
+    override fun saveToken(
+        token: CsrfToken?,
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+    ) {
         val tokenValue = if (token != null) token.token else ""
 
-        var responseCookieBuilder = ResponseCookie
-            .from(cookieName, tokenValue)
-            .secure((if (secure != null) secure else request.isSecure)!!)
-            .httpOnly(cookieHttpOnly)
-            .path(if (StringUtils.hasLength(cookiePath)) cookiePath else getRequestContext(request))
-            .maxAge(if (token != null) cookieMaxAge else 0L)
-            .sameSite("None")
+        var responseCookieBuilder =
+            ResponseCookie
+                .from(cookieName, tokenValue)
+                .secure((if (secure != null) secure else request.isSecure)!!)
+                .httpOnly(cookieHttpOnly)
+                .path(if (StringUtils.hasLength(cookiePath)) cookiePath else getRequestContext(request))
+                .maxAge(if (token != null) cookieMaxAge else 0L)
+                .sameSite("None")
 
         val domain = getDomainName(request.getHeader("referer"))
         if (allowedOrigins != null && allowedOrigins!!.any { getDomainName(it) == domain }) {
@@ -55,9 +59,15 @@ class CustomCsrfTokenRepository : CsrfTokenRepository {
             null
         } else {
             val token = cookie.value
-            if (!StringUtils.hasLength(token)) null else DefaultCsrfToken(
-                headerName, parameterName, token
-            )
+            if (!StringUtils.hasLength(token)) {
+                null
+            } else {
+                DefaultCsrfToken(
+                    headerName,
+                    parameterName,
+                    token,
+                )
+            }
         }
     }
 
@@ -85,10 +95,7 @@ class CustomCsrfTokenRepository : CsrfTokenRepository {
         return if (contextPath.length > 0) contextPath else "/"
     }
 
-    private fun createNewToken(): String {
-        return UUID.randomUUID().toString()
-    }
-
+    private fun createNewToken(): String = UUID.randomUUID().toString()
 
     fun setSecure(secure: Boolean?) {
         this.secure = secure

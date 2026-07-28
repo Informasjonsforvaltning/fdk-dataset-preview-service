@@ -15,13 +15,13 @@ import kotlin.test.assertEquals
 @SpringBootTest(
     properties = [
         "spring.profiles.active=integration-test",
-        "logging.level.no.fdk=DEBUG"],
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
+        "logging.level.no.fdk=DEBUG",
+    ],
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 )
 @ContextConfiguration(initializers = [ApiTestContext.Initializer::class])
 @Tag("integration")
 class ApplicationStatusContractTest : ApiTestContext() {
-
     @Test
     fun `Ping should return http status OK, without authentication`() {
         val request = RestTemplate()

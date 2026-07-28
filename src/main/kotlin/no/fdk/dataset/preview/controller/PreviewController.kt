@@ -3,20 +3,24 @@ package no.fdk.dataset.preview.controller
 import no.fdk.dataset.preview.model.PreviewRequest
 import no.fdk.dataset.preview.service.PreviewService
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/preview")
 class PreviewController(
-    private val previewService: PreviewService
+    private val previewService: PreviewService,
 ) {
     @GetMapping()
-    fun preview(): ResponseEntity<Any> {
-        return ResponseEntity.ok().build()
-    }
+    fun preview(): ResponseEntity<Any> = ResponseEntity.ok().build()
 
     @PostMapping(consumes = ["application/json"])
-    fun preview(@RequestBody previewRequest: PreviewRequest): ResponseEntity<Any> {
+    fun preview(
+        @RequestBody previewRequest: PreviewRequest,
+    ): ResponseEntity<Any> {
         val preview = previewService.readAndParseResource(previewRequest.url, previewRequest.rows)
         return ResponseEntity.ok(preview)
     }

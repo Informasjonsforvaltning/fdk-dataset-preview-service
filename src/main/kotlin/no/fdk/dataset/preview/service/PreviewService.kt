@@ -1,6 +1,10 @@
 package no.fdk.dataset.preview.service
 
-import no.fdk.dataset.preview.model.*
+import no.fdk.dataset.preview.model.Plain
+import no.fdk.dataset.preview.model.Preview
+import no.fdk.dataset.preview.model.Table
+import no.fdk.dataset.preview.model.TableHeader
+import no.fdk.dataset.preview.model.TableRow
 import no.fdk.dataset.preview.util.ContentSanitizer
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
@@ -35,27 +39,26 @@ import java.io.InputStreamReader
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.*
+import java.util.Arrays
 import java.util.zip.ZipInputStream
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.outputStream
-
 
 private val LOGGER: Logger = LoggerFactory.getLogger(PreviewService::class.java)
 
 @Service
 class PreviewService(
-    private val downloader: FileDownloader
+    private val downloader: FileDownloader,
 ) {
-    
     @Value("\${application.security.maxFileSize:10485760}")
     private val maxFileSizeBytes: Long = 10485760
-    
+
     @Value("\${application.security.maxProcessingTime:30}")
     private val maxProcessingTimeSeconds: Long = 30L
+
     companion object {
         val DELIMITERS = arrayOf(';', ',')
-        const val NO_DELIMITER = '\u0000' //empty char
+        const val NO_DELIMITER = '\u0000' // empty char
         const val DEFAULT_ROWS = 100
         const val MAX_ROWS = 1000
         const val MAX_COLUMNS = 100
@@ -63,7 +66,10 @@ class PreviewService(
 
     private class SheetParseLimitReached : SAXException("Sheet parse row limit reached")
 
-    private fun readFromStream(stream: InputStream, length: Int): ByteArray {
+    private fun readFromStream(
+        stream: InputStream,
+        length: Int,
+    ): ByteArray {
         val bytes = ByteArray(length)
         var totalRead = 0
         var lastRead = stream.read(bytes)
@@ -82,18 +88,19 @@ class PreviewService(
     private fun detectDelimiter(inputStream: InputStream): Char {
         try {
             val length = 1024
-            if(inputStream.markSupported()) {
+            if (inputStream.markSupported()) {
                 inputStream.mark(length)
             }
 
             val firstLine = String(readFromStream(inputStream, length))
 
-            return Arrays.stream(DELIMITERS)
+            return Arrays
+                .stream(DELIMITERS)
                 .filter { s -> firstLine.contains(s.toString()) }
                 .findFirst()
                 .orElse(NO_DELIMITER)
         } finally {
-            if(inputStream.markSupported()) {
+            if (inputStream.markSupported()) {
                 inputStream.reset()
             } else {
                 inputStream.close()
@@ -108,7 +115,10 @@ class PreviewService(
             else -> rows
         }
 
-    fun readAndParseResource(resourceUrl: String, rows: Int?): Preview {
+    fun readAndParseResource(
+        resourceUrl: String,
+        rows: Int?,
+    ): Preview {
         logDebug("Read and parse resource $resourceUrl")
 
         try {
@@ -120,49 +130,73 @@ class PreviewService(
 
                 body.byteStream().use { inputStream ->
                     when {
-                        isZip(body.contentType().toString()) -> zipPreview(
-                            rows,
-                            inputStream)
-                        isXlsx(body.contentType().toString()) || isXlsxFile(resourceUrl) -> xlsxPreview(
-                            rows,
-                            inputStream)
-                        isXlsFile(resourceUrl) -> xlsPreview(
-                            rows,
-                            inputStream)
-                        isCsv(body.contentType().toString()) || isCsvFile(resourceUrl) ->
-                            if (!inputStream.markSupported())
+                        isZip(body.contentType().toString()) -> {
+                            zipPreview(
+                                rows,
+                                inputStream,
+                            )
+                        }
+
+                        isXlsx(body.contentType().toString()) || isXlsxFile(resourceUrl) -> {
+                            xlsxPreview(
+                                rows,
+                                inputStream,
+                            )
+                        }
+
+                        isXlsFile(resourceUrl) -> {
+                            xlsPreview(
+                                rows,
+                                inputStream,
+                            )
+                        }
+
+                        isCsv(body.contentType().toString()) || isCsvFile(resourceUrl) -> {
+                            if (!inputStream.markSupported()) {
                                 downloader.download(resourceUrl, { secondBody ->
                                     secondBody.byteStream().use { secondInputStream ->
                                         csvPreview(
                                             rows,
                                             inputStream,
                                             secondInputStream,
-                                            body.contentType()?.charset()
+                                            body.contentType()?.charset(),
                                         )
                                     }
                                 })
-                            else
+                            } else {
                                 csvPreview(
                                     rows,
                                     inputStream,
                                     null,
-                                    body.contentType()?.charset()
+                                    body.contentType()?.charset(),
                                 )
-                        isPlain(body.contentType().toString()) || isPlainFile(resourceUrl) -> plainPreview(
-                            inputStream,
-                            body.contentType().toString(),
-                            body.contentType()?.charset())
-                        else -> throw PreviewException("Unsupported file format")
+                            }
+                        }
+
+                        isPlain(body.contentType().toString()) || isPlainFile(resourceUrl) -> {
+                            plainPreview(
+                                inputStream,
+                                body.contentType().toString(),
+                                body.contentType()?.charset(),
+                            )
+                        }
+
+                        else -> {
+                            throw PreviewException("Unsupported file format")
+                        }
                     }
                 }
             })
-        } catch(e: DownloadException) {
+        } catch (e: DownloadException) {
             logDebug("Unable to download resource $resourceUrl", e)
             throw PreviewException("Failed to download file")
         }
     }
 
-    private fun zipPreview(rows: Int?, inputStream: InputStream): Preview {
+    private fun zipPreview(
+        rows: Int?,
+        inputStream: InputStream,
+    ): Preview {
         logDebug("Extracting zip")
 
         val zis = ZipInputStream(inputStream)
@@ -187,7 +221,7 @@ class PreviewService(
                             rows,
                             bis,
                             null,
-                            bis.getMediaType().getCharset()
+                            bis.getMediaType().getCharset(),
                         )
                     }
                     if (isPlainFile(zipEntry.name)) {
@@ -196,7 +230,7 @@ class PreviewService(
                         return plainPreview(
                             bis,
                             mediaType.toString(),
-                            mediaType.getCharset()
+                            mediaType.getCharset(),
                         )
                     }
                 }
@@ -232,13 +266,14 @@ class PreviewService(
         return ByteArrayInputStream(bos.toByteArray())
     }
 
-    private fun InputStream.getMediaType(): MediaType =
-        Tika().detector.detect(this, Metadata())
+    private fun InputStream.getMediaType(): MediaType = Tika().detector.detect(this, Metadata())
 
-    private fun MediaType.getCharset(): Charset =
-        Charset.forName(parameters.getOrDefault("charset", "UTF-8"))
+    private fun MediaType.getCharset(): Charset = Charset.forName(parameters.getOrDefault("charset", "UTF-8"))
 
-    private fun xlsxPreview(rows: Int?, inputStream: InputStream): Preview {
+    private fun xlsxPreview(
+        rows: Int?,
+        inputStream: InputStream,
+    ): Preview {
         logDebug("Parsing Excel")
 
         val maxRowsToProcess = getMaxNumberOfRows(rows) * 2
@@ -251,65 +286,73 @@ class PreviewService(
             OPCPackage.open(tempFile.toFile(), PackageAccess.READ).use { pkg ->
                 val sharedStrings = ReadOnlySharedStringsTable(pkg)
                 val reader = XSSFReader(pkg)
-                val styles: StylesTable? = try {
-                    reader.stylesTable
-                } catch (_: Exception) {
-                    null
-                }
+                val styles: StylesTable? =
+                    try {
+                        reader.stylesTable
+                    } catch (_: Exception) {
+                        null
+                    }
                 val sheets = reader.sheetsData
                 if (!sheets.hasNext()) {
                     throw PreviewException("Invalid Excel file content")
                 }
 
                 sheets.next().use { sheetStream ->
-                    val sheetHandler = object : XSSFSheetXMLHandler.SheetContentsHandler {
-                        private var currentRow = arrayListOf<String>()
+                    val sheetHandler =
+                        object : XSSFSheetXMLHandler.SheetContentsHandler {
+                            private var currentRow = arrayListOf<String>()
 
-                        override fun startRow(rowNum: Int) {
-                            if (System.currentTimeMillis() - startTime > maxProcessingTimeSeconds * 1000) {
-                                throw PreviewException("File processing timeout exceeded")
+                            override fun startRow(rowNum: Int) {
+                                if (System.currentTimeMillis() - startTime > maxProcessingTimeSeconds * 1000) {
+                                    throw PreviewException("File processing timeout exceeded")
+                                }
+                                if (tableRows.size >= maxRowsToProcess) {
+                                    logDebug("Excel processing limited to $maxRowsToProcess rows for security")
+                                    throw SheetParseLimitReached()
+                                }
+                                currentRow = arrayListOf()
                             }
-                            if (tableRows.size >= maxRowsToProcess) {
-                                logDebug("Excel processing limited to $maxRowsToProcess rows for security")
-                                throw SheetParseLimitReached()
+
+                            override fun endRow(rowNum: Int) {
+                                if (currentRow.size > MAX_COLUMNS) {
+                                    currentRow = ArrayList(currentRow.subList(0, MAX_COLUMNS))
+                                }
+
+                                lastCellNum =
+                                    when {
+                                        currentRow.size <= lastCellNum -> lastCellNum
+                                        currentRow.lastOrNull()?.isNotEmpty() == true -> currentRow.size
+                                        else -> lastCellNum
+                                    }
+
+                                tableRows.add(TableRow(currentRow.toList()))
                             }
-                            currentRow = arrayListOf()
+
+                            override fun cell(
+                                cellReference: String?,
+                                formattedValue: String?,
+                                comment: XSSFComment?,
+                            ) {
+                                if (cellReference == null) return
+                                val col = CellReference(cellReference).col.toInt()
+                                if (col < 0 || col >= MAX_COLUMNS) return
+
+                                while (currentRow.size <= col) {
+                                    currentRow.add("")
+                                }
+                                currentRow[col] = ContentSanitizer.sanitizeCellContent(formattedValue ?: "")
+                            }
                         }
-
-                        override fun endRow(rowNum: Int) {
-                            if (currentRow.size > MAX_COLUMNS) {
-                                currentRow = ArrayList(currentRow.subList(0, MAX_COLUMNS))
-                            }
-
-                            lastCellNum = when {
-                                currentRow.size <= lastCellNum -> lastCellNum
-                                currentRow.lastOrNull()?.isNotEmpty() == true -> currentRow.size
-                                else -> lastCellNum
-                            }
-
-                            tableRows.add(TableRow(currentRow.toList()))
-                        }
-
-                        override fun cell(cellReference: String?, formattedValue: String?, comment: XSSFComment?) {
-                            if (cellReference == null) return
-                            val col = CellReference(cellReference).col.toInt()
-                            if (col < 0 || col >= MAX_COLUMNS) return
-
-                            while (currentRow.size <= col) {
-                                currentRow.add("")
-                            }
-                            currentRow[col] = ContentSanitizer.sanitizeCellContent(formattedValue ?: "")
-                        }
-                    }
 
                     val formatter = DataFormatter()
-                    val xmlHandler = XSSFSheetXMLHandler(
-                        styles,
-                        sharedStrings,
-                        sheetHandler,
-                        formatter,
-                        false
-                    )
+                    val xmlHandler =
+                        XSSFSheetXMLHandler(
+                            styles,
+                            sharedStrings,
+                            sheetHandler,
+                            formatter,
+                            false,
+                        )
                     val xmlReader = XMLHelper.newXMLReader()
                     xmlReader.contentHandler = xmlHandler
                     try {
@@ -319,8 +362,14 @@ class PreviewService(
                             is SheetParseLimitReached -> {
                                 // Expected once we have enough preview rows
                             }
-                            is PreviewException -> throw root
-                            else -> throw e
+
+                            is PreviewException -> {
+                                throw root
+                            }
+
+                            else -> {
+                                throw e
+                            }
                         }
                     }
                 }
@@ -329,7 +378,10 @@ class PreviewService(
             throw e
         } catch (e: Exception) {
             when (val root = e.unwrapCause()) {
-                is PreviewException -> throw root
+                is PreviewException -> {
+                    throw root
+                }
+
                 else -> {
                     logDebug("Failed to parse Excel", e)
                     throw PreviewException("Failed to parse Excel file")
@@ -346,7 +398,10 @@ class PreviewService(
         return buildExcelPreview(tableRows, lastCellNum, rows)
     }
 
-    private fun xlsPreview(rows: Int?, inputStream: InputStream): Preview {
+    private fun xlsPreview(
+        rows: Int?,
+        inputStream: InputStream,
+    ): Preview {
         logDebug("Parsing legacy Excel (.xls)")
 
         val maxRowsToProcess = getMaxNumberOfRows(rows) * 2
@@ -385,16 +440,17 @@ class PreviewService(
                             val cell = row.getCell(col)
                             currentRow.add(
                                 ContentSanitizer.sanitizeCellContent(
-                                    if (cell != null) formatter.formatCellValue(cell) else ""
-                                )
+                                    if (cell != null) formatter.formatCellValue(cell) else "",
+                                ),
                             )
                         }
 
-                        lastCellNum = when {
-                            currentRow.size <= lastCellNum -> lastCellNum
-                            currentRow.lastOrNull()?.isNotEmpty() == true -> currentRow.size
-                            else -> lastCellNum
-                        }
+                        lastCellNum =
+                            when {
+                                currentRow.size <= lastCellNum -> lastCellNum
+                                currentRow.lastOrNull()?.isNotEmpty() == true -> currentRow.size
+                                else -> lastCellNum
+                            }
 
                         tableRows.add(TableRow(currentRow.toList()))
                     }
@@ -416,14 +472,19 @@ class PreviewService(
         return buildExcelPreview(tableRows, lastCellNum, rows)
     }
 
-    private fun buildExcelPreview(tableRows: List<TableRow>, lastCellNum: Int, rows: Int?): Preview {
-        val headerIndex = if (lastCellNum > 0) {
-            tableRows.indexOfFirst {
-                it.columns.size == lastCellNum && it.columns[lastCellNum - 1].isNotEmpty()
+    private fun buildExcelPreview(
+        tableRows: List<TableRow>,
+        lastCellNum: Int,
+        rows: Int?,
+    ): Preview {
+        val headerIndex =
+            if (lastCellNum > 0) {
+                tableRows.indexOfFirst {
+                    it.columns.size == lastCellNum && it.columns[lastCellNum - 1].isNotEmpty()
+                }
+            } else {
+                -1
             }
-        } else {
-            -1
-        }
 
         val startHeaderIndex = if (headerIndex == -1) 0 else headerIndex
         val endHeaderIndex = startHeaderIndex + 1
@@ -437,7 +498,10 @@ class PreviewService(
         return Preview(table = table, plain = null)
     }
 
-    private fun InputStream.copyToTempFile(maxBytes: Long, suffix: String = ".xlsx"): Path {
+    private fun InputStream.copyToTempFile(
+        maxBytes: Long,
+        suffix: String = ".xlsx",
+    ): Path {
         val tempFile = Files.createTempFile("fdk-preview-", suffix)
         try {
             tempFile.outputStream().use { out ->
@@ -470,47 +534,71 @@ class PreviewService(
         return current
     }
 
-    private fun csvPreview(rows: Int?, inputStream: InputStream, secondInputStream: InputStream?, charset: Charset?): Preview {
+    private fun csvPreview(
+        rows: Int?,
+        inputStream: InputStream,
+        secondInputStream: InputStream?,
+        charset: Charset?,
+    ): Preview {
         logDebug("Parsing CSV")
 
         val delimiter = detectDelimiter(inputStream)
         logDebug("Detected delimiter $delimiter")
 
-        CSVFormat.DEFAULT.builder()
+        CSVFormat.DEFAULT
+            .builder()
             .setDelimiter(delimiter)
             .setEscape('\\')
             .get()
-            .parse( InputStreamReader( BOMInputStream.Builder()
-                .setInputStream(secondInputStream ?: inputStream)
-                .get(),
-                charset ?: Charset.forName("UTF-8")))
-            .use { return  Preview(table = parseCSVToTable(it, getMaxNumberOfRows(rows)), plain = null) }
+            .parse(
+                InputStreamReader(
+                    BOMInputStream
+                        .Builder()
+                        .setInputStream(secondInputStream ?: inputStream)
+                        .get(),
+                    charset ?: Charset.forName("UTF-8"),
+                ),
+            ).use { return Preview(table = parseCSVToTable(it, getMaxNumberOfRows(rows)), plain = null) }
     }
 
-    private fun plainPreview(inputStream: InputStream, mediaType: String?, charset: Charset?): Preview {
+    private fun plainPreview(
+        inputStream: InputStream,
+        mediaType: String?,
+        charset: Charset?,
+    ): Preview {
         logDebug("Fetch plain content")
-        
+
         val content = IOUtils.toString(inputStream, charset ?: Charset.forName("UTF-8"))
         val sanitizedContent = ContentSanitizer.removeDangerousContent(content) // Remove dangerous HTML/script content
         val plain = Plain(sanitizedContent, mediaType ?: "")
-        return Preview(table=null, plain=plain)
+        return Preview(table = null, plain = plain)
     }
 
-    private fun parseCSVToTable(parser: CSVParser, maxNumberOfRows: Int): Table {
+    private fun parseCSVToTable(
+        parser: CSVParser,
+        maxNumberOfRows: Int,
+    ): Table {
         var tableHeader = TableHeader(arrayListOf())
         val tableRows = arrayListOf<TableRow>()
         val it = parser.iterator()
-        if(it.hasNext()) {
-            tableHeader = TableHeader(it.next().map { headerValue ->
-                ContentSanitizer.sanitizeCellContent(headerValue) // Sanitize CSV header content to prevent XSS
-            })
+        if (it.hasNext()) {
+            tableHeader =
+                TableHeader(
+                    it.next().map { headerValue ->
+                        ContentSanitizer.sanitizeCellContent(headerValue) // Sanitize CSV header content to prevent XSS
+                    },
+                )
             tableHeader.beautify()
         }
 
         while (it.hasNext() && (maxNumberOfRows <= 0 || tableRows.size < maxNumberOfRows)) {
-            tableRows.add(TableRow(it.next().map { cellValue -> 
-                ContentSanitizer.sanitizeCellContent(cellValue) // Sanitize CSV cell content to prevent XSS
-            }))
+            tableRows.add(
+                TableRow(
+                    it.next().map { cellValue ->
+                        ContentSanitizer.sanitizeCellContent(cellValue) // Sanitize CSV cell content to prevent XSS
+                    },
+                ),
+            )
         }
 
         return Table(tableHeader, tableRows)
@@ -526,8 +614,11 @@ class PreviewService(
     private fun isXlsx(mediaType: String?): Boolean =
         when {
             mediaType == null -> false
+
             """application/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet"""
-                .toRegex().containsMatchIn(mediaType) -> true
+                .toRegex()
+                .containsMatchIn(mediaType) -> true
+
             else -> false
         }
 
@@ -585,8 +676,11 @@ class PreviewService(
         logDebug(message, null)
     }
 
-    private fun logDebug(message: String, throwable: Throwable?) {
-        if(LOGGER.isDebugEnabled) {
+    private fun logDebug(
+        message: String,
+        throwable: Throwable?,
+    ) {
+        if (LOGGER.isDebugEnabled) {
             LOGGER.debug(message, throwable)
         }
     }
