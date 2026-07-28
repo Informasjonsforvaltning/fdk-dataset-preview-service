@@ -13,7 +13,6 @@ import org.mockito.kotlin.whenever
 
 @Tag("unit")
 class PreviewServiceTest {
-
     private val downloader: FileDownloader = mock()
     private val previewService = PreviewService(downloader)
 
@@ -22,9 +21,9 @@ class PreviewServiceTest {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(
             javaClass.classLoader.getResourceAsStream("test.csv"),
-            javaClass.classLoader.getResourceAsStream("test.csv"))
-        whenever(responseBody.contentType()).thenReturn(
-            "text/csv; charset=utf-8".toMediaTypeOrNull())
+            javaClass.classLoader.getResourceAsStream("test.csv"),
+        )
+        whenever(responseBody.contentType()).thenReturn("text/csv; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.csv"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -46,9 +45,9 @@ class PreviewServiceTest {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(
             javaClass.classLoader.getResourceAsStream("test.csv.zip"),
-            javaClass.classLoader.getResourceAsStream("test.csv.zip"))
-        whenever(responseBody.contentType()).thenReturn(
-            "application/zip".toMediaTypeOrNull())
+            javaClass.classLoader.getResourceAsStream("test.csv.zip"),
+        )
+        whenever(responseBody.contentType()).thenReturn("application/zip".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.csv.zip"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -70,9 +69,9 @@ class PreviewServiceTest {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(
             javaClass.classLoader.getResourceAsStream("test.csv"),
-            javaClass.classLoader.getResourceAsStream("test.csv"))
-        whenever(responseBody.contentType()).thenReturn(
-            "application~/vnd.ms-excel~; charset=utf-8".toMediaTypeOrNull())
+            javaClass.classLoader.getResourceAsStream("test.csv"),
+        )
+        whenever(responseBody.contentType()).thenReturn("application~/vnd.ms-excel~; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.csv"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -92,10 +91,10 @@ class PreviewServiceTest {
     @Test
     fun test_if_xlsx_resource_parses_as_valid_table() {
         val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.xlsx"))
-        whenever(responseBody.contentType()).thenReturn(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8".toMediaTypeOrNull())
+        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xlsx"))
+        whenever(
+            responseBody.contentType(),
+        ).thenReturn("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.xlsx"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -115,10 +114,8 @@ class PreviewServiceTest {
     @Test
     fun test_if_xls_resource_parses_as_valid_table() {
         val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.xls"))
-        whenever(responseBody.contentType()).thenReturn(
-            "application/octet-stream".toMediaTypeOrNull())
+        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xls"))
+        whenever(responseBody.contentType()).thenReturn("application/octet-stream".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.xls"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -143,10 +140,8 @@ class PreviewServiceTest {
     @Test
     fun test_if_xls_with_ms_excel_content_type_parses_as_valid_table() {
         val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.xls"))
-        whenever(responseBody.contentType()).thenReturn(
-            "application/vnd.ms-excel".toMediaTypeOrNull())
+        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xls"))
+        whenever(responseBody.contentType()).thenReturn("application/vnd.ms-excel".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.xls"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -165,11 +160,11 @@ class PreviewServiceTest {
     @Test
     fun test_if_oversized_xlsx_is_rejected() {
         val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.xlsx"))
+        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xlsx"))
         whenever(responseBody.contentLength()).thenReturn(20_000_000)
-        whenever(responseBody.contentType()).thenReturn(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".toMediaTypeOrNull())
+        whenever(
+            responseBody.contentType(),
+        ).thenReturn("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/large.xlsx"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -177,19 +172,18 @@ class PreviewServiceTest {
             block(responseBody)
         }
 
-        val exception = Assertions.assertThrows(PreviewException::class.java) {
-            previewService.readAndParseResource(resourceUrl, 10)
-        }
+        val exception =
+            Assertions.assertThrows(PreviewException::class.java) {
+                previewService.readAndParseResource(resourceUrl, 10)
+            }
         Assertions.assertEquals("File is too large to process", exception.message)
     }
 
     @Test
     fun test_if_resource_parses_as_valid_plain() {
         val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.xml"))
-        whenever(responseBody.contentType()).thenReturn(
-            "application/xml; charset=utf-8".toMediaTypeOrNull())
+        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xml"))
+        whenever(responseBody.contentType()).thenReturn("application/xml; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.xml"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -202,18 +196,19 @@ class PreviewServiceTest {
         val resource = javaClass.classLoader.getResource("test.xml")!!
 
         Assertions.assertNull(table)
-        Assertions.assertEquals(resource
-            .readText(Charsets.UTF_8), preview.plain?.value)
+        Assertions.assertEquals(
+            resource
+                .readText(Charsets.UTF_8),
+            preview.plain?.value,
+        )
         Assertions.assertEquals("application/xml; charset=utf-8", preview.plain?.contentType)
     }
 
     @Test
     fun test_if_resource_with_extended_xml_parses_as_valid_plain() {
         val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.xml"))
-        whenever(responseBody.contentType()).thenReturn(
-            "application/3gpp-ims+xml; charset=utf-8".toMediaTypeOrNull())
+        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xml"))
+        whenever(responseBody.contentType()).thenReturn("application/3gpp-ims+xml; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.xml"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -226,18 +221,19 @@ class PreviewServiceTest {
         val resource = javaClass.classLoader.getResource("test.xml")!!
 
         Assertions.assertNull(table)
-        Assertions.assertEquals(resource
-            .readText(Charsets.UTF_8), preview.plain?.value)
+        Assertions.assertEquals(
+            resource
+                .readText(Charsets.UTF_8),
+            preview.plain?.value,
+        )
         Assertions.assertEquals("application/3gpp-ims+xml; charset=utf-8", preview.plain?.contentType)
     }
 
     @Test
     fun test_if_resource_with_extended_json_parses_as_valid_plain() {
         val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.json"))
-        whenever(responseBody.contentType()).thenReturn(
-            "application/alto-costmap+json; charset=utf-8".toMediaTypeOrNull())
+        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.json"))
+        whenever(responseBody.contentType()).thenReturn("application/alto-costmap+json; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.json"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -250,18 +246,19 @@ class PreviewServiceTest {
         val resource = javaClass.classLoader.getResource("test.json")!!
 
         Assertions.assertNull(table)
-        Assertions.assertEquals(resource
-            .readText(Charsets.UTF_8), preview.plain?.value)
+        Assertions.assertEquals(
+            resource
+                .readText(Charsets.UTF_8),
+            preview.plain?.value,
+        )
         Assertions.assertEquals("application/alto-costmap+json; charset=utf-8", preview.plain?.contentType)
     }
 
     @Test
     fun test_if_resource_parses_as_invalid_content_type() {
         val responseBody: ResponseBody = mock()
-        whenever(responseBody.byteStream()).thenReturn(
-            javaClass.classLoader.getResourceAsStream("test.xml"))
-        whenever(responseBody.contentType()).thenReturn(
-            "text/turtle; charset=utf-8".toMediaTypeOrNull())
+        whenever(responseBody.byteStream()).thenReturn(javaClass.classLoader.getResourceAsStream("test.xml"))
+        whenever(responseBody.contentType()).thenReturn("text/turtle; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/test.ttl"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -279,9 +276,9 @@ class PreviewServiceTest {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(
             javaClass.classLoader.getResourceAsStream("iso-charset.csv"),
-            javaClass.classLoader.getResourceAsStream("iso-charset.csv"))
-        whenever(responseBody.contentType()).thenReturn(
-            "text/csv; charset=iso-8859-1".toMediaTypeOrNull())
+            javaClass.classLoader.getResourceAsStream("iso-charset.csv"),
+        )
+        whenever(responseBody.contentType()).thenReturn("text/csv; charset=iso-8859-1".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/iso-charset.csv"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -302,9 +299,9 @@ class PreviewServiceTest {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(
             javaClass.classLoader.getResourceAsStream("utf8-charset.csv"),
-            javaClass.classLoader.getResourceAsStream("utf8-charset.csv"))
-        whenever(responseBody.contentType()).thenReturn(
-            "text/csv; charset=utf-8".toMediaTypeOrNull())
+            javaClass.classLoader.getResourceAsStream("utf8-charset.csv"),
+        )
+        whenever(responseBody.contentType()).thenReturn("text/csv; charset=utf-8".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/utf8-charset.csv"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
@@ -325,9 +322,9 @@ class PreviewServiceTest {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(
             javaClass.classLoader.getResourceAsStream("utf16-charset.csv"),
-            javaClass.classLoader.getResourceAsStream("utf16-charset.csv"))
-        whenever(responseBody.contentType()).thenReturn(
-            "text/csv; charset=utf-16".toMediaTypeOrNull())
+            javaClass.classLoader.getResourceAsStream("utf16-charset.csv"),
+        )
+        whenever(responseBody.contentType()).thenReturn("text/csv; charset=utf-16".toMediaTypeOrNull())
 
         val resourceUrl = "http://domain.com/utf16-charset.csv"
         whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->

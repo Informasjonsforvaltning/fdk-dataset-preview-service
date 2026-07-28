@@ -15,7 +15,6 @@ import java.util.concurrent.TimeUnit
 
 @Component
 class FileDownloader {
-
     @Value("\${application.allowLocalhost}")
     private val allowLocalhost: Boolean = false
 
@@ -26,18 +25,25 @@ class FileDownloader {
     private var okHttpClient: OkHttpClient
 
     init {
-        val okHttpBuilder = OkHttpClient().newBuilder().connectTimeout(HTTP_TIMEOUT.toLong(), TimeUnit.SECONDS)
-            .readTimeout(HTTP_TIMEOUT.toLong(), TimeUnit.SECONDS)
+        val okHttpBuilder =
+            OkHttpClient()
+                .newBuilder()
+                .connectTimeout(HTTP_TIMEOUT.toLong(), TimeUnit.SECONDS)
+                .readTimeout(HTTP_TIMEOUT.toLong(), TimeUnit.SECONDS)
         this.okHttpClient = okHttpBuilder.build()
     }
 
-    fun <T> download(url: String, block: (ResponseBody) -> T): T {
-        val uri = try {
-            URI(url)
-        } catch (e: URISyntaxException) {
-            logger.warn(e.message)
-            throw DownloadUrlException("Invalid URL format")
-        }
+    fun <T> download(
+        url: String,
+        block: (ResponseBody) -> T,
+    ): T {
+        val uri =
+            try {
+                URI(url)
+            } catch (e: URISyntaxException) {
+                logger.warn(e.message)
+                throw DownloadUrlException("Invalid URL format")
+            }
 
         if (!allowLocalhost) {
             try {
@@ -48,13 +54,16 @@ class FileDownloader {
             }
         }
 
-
         try {
-            val request = Request.Builder()
-                .url(uri.toURL())
-                .addHeader("User-Agent", "FDK-Dataset-Preview/1.0")
-                .addHeader("Accept", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/zip,text/plain,application/json,application/xml")
-                .build()
+            val request =
+                Request
+                    .Builder()
+                    .url(uri.toURL())
+                    .addHeader("User-Agent", "FDK-Dataset-Preview/1.0")
+                    .addHeader(
+                        "Accept",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/zip,text/plain,application/json,application/xml",
+                    ).build()
             okHttpClient.newCall(request).execute().use { response ->
                 val body = response.body
                 val responseCode = response.code

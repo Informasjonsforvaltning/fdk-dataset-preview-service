@@ -15,14 +15,19 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
 
-class CsrfTestException(message: String) : Exception(message)
+class CsrfTestException(
+    message: String,
+) : Exception(message)
 
-private fun apiGetCSRF(url: String, token: String? = null): Pair<String, String?> {
+private fun apiGetCSRF(
+    url: String,
+    token: String? = null,
+): Pair<String, String?> {
     val connection = URL(url).openConnection() as HttpURLConnection
     token?.let { connection.setRequestProperty("X-API-KEY", it) }
     connection.connect()
 
-    if(connection.responseCode != 200) {
+    if (connection.responseCode != 200) {
         throw CsrfTestException("Unable to fetch CSRF token")
     }
 
@@ -36,7 +41,7 @@ private fun apiGetCSRF(url: String, token: String? = null): Pair<String, String?
     val csrfTokenJsonToken = csrfTokenJson["token"].asText()
 
     val setCookieValue = connection.headerFields["Set-Cookie"]
-    val csrfToken = setCookieValue?.find { s -> s.startsWith("DATASET-PREVIEW-CSRF-TOKEN")}
+    val csrfToken = setCookieValue?.find { s -> s.startsWith("DATASET-PREVIEW-CSRF-TOKEN") }
     return Pair(csrfTokenJsonToken, csrfToken?.split(";")?.get(0))
 }
 
@@ -46,7 +51,7 @@ fun authorizedRequest(
     body: String? = null,
     token: String? = null,
     httpMethod: HttpMethod,
-    accept: MediaType = MediaType.APPLICATION_JSON
+    accept: MediaType = MediaType.APPLICATION_JSON,
 ): Map<String, Any> {
     val request = RestTemplate()
     request.requestFactory = HttpComponentsClientHttpRequestFactory()
@@ -66,28 +71,24 @@ fun authorizedRequest(
         mapOf<String, Any>(
             "body" to (response.body ?: ""),
             "header" to response.headers.toString(),
-            "status" to response.statusCode.value()
+            "status" to response.statusCode.value(),
         )
-
     } catch (e: HttpClientErrorException) {
         mapOf<String, Any>(
             "status" to e.statusCode.value(),
             "header" to " ",
-            "body" to e.toString()
+            "body" to e.toString(),
         )
     } catch (e: Exception) {
         mapOf<String, Any>(
             "status" to e.toString(),
             "header" to " ",
-            "body" to " "
+            "body" to " ",
         )
     }
-
 }
 
 class TestResponseReader {
-    private fun resourceAsReader(resourceName: String): Reader {
-        return InputStreamReader(javaClass.classLoader.getResourceAsStream(resourceName)!!, StandardCharsets.UTF_8)
-    }
+    private fun resourceAsReader(resourceName: String): Reader =
+        InputStreamReader(javaClass.classLoader.getResourceAsStream(resourceName)!!, StandardCharsets.UTF_8)
 }
-

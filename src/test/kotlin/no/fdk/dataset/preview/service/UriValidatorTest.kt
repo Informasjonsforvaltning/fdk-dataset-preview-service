@@ -9,7 +9,6 @@ import java.net.URI
 
 @Tag("unit")
 class UriValidatorTest {
-
     @Test
     fun `valid https url`() {
         assertDoesNotThrow { URI("https://example.com").validate() }

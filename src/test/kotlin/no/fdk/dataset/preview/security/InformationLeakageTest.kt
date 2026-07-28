@@ -16,13 +16,14 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @SpringBootTest
-@TestPropertySource(properties = [
-    "application.security.sanitizeHeaders=true",
-    "application.security.userAgent=Test-Agent/1.0",
-    "application.allowLocalhost=true"
-])
+@TestPropertySource(
+    properties = [
+        "application.security.sanitizeHeaders=true",
+        "application.security.userAgent=Test-Agent/1.0",
+        "application.allowLocalhost=true",
+    ],
+)
 class InformationLeakageTest {
-
     private lateinit var mockServer: MockWebServer
     private lateinit var fileDownloader: FileDownloader
 
@@ -33,7 +34,7 @@ class InformationLeakageTest {
     fun setUp() {
         mockServer = MockWebServer()
         mockServer.start()
-        
+
         // Create FileDownloader with test configuration
         fileDownloader = FileDownloader()
     }
@@ -46,10 +47,12 @@ class InformationLeakageTest {
     @Test
     fun `should send minimal headers and avoid information leakage`() {
         // Setup mock response
-        mockServer.enqueue(MockResponse()
-            .setResponseCode(200)
-            .setHeader("Content-Type", "text/csv")
-            .setBody("name,age\nJohn,30\nJane,25"))
+        mockServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "text/csv")
+                .setBody("name,age\nJohn,30\nJane,25"),
+        )
 
         // Make request
         val url = mockServer.url("/test.csv").toString()
@@ -98,10 +101,12 @@ class InformationLeakageTest {
 
     @Test
     fun `should not reveal service details in User-Agent`() {
-        mockServer.enqueue(MockResponse()
-            .setResponseCode(200)
-            .setHeader("Content-Type", "text/csv")
-            .setBody("test,data"))
+        mockServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "text/csv")
+                .setBody("test,data"),
+        )
 
         val url = mockServer.url("/test.csv").toString()
         fileDownloader.download(url) { responseBody ->
@@ -121,6 +126,3 @@ class InformationLeakageTest {
         assertFalse(userAgent?.contains("Kotlin") == true)
     }
 }
-
-
-

@@ -17,16 +17,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 open class SecurityConfiguration(
-    private val applicationSettings: ApplicationSettings
+    private val applicationSettings: ApplicationSettings,
 ) {
-
     @Bean
     open fun filterChain(http: HttpSecurity): SecurityFilterChain {
         val filter = APIKeyAuthFilter("X-API-KEY")
         filter.setAuthenticationManager { authentication ->
             val principal = authentication.principal as String
-            if (principal.isBlank() || applicationSettings.apiKey != principal
-            ) {
+            if (principal.isBlank() || applicationSettings.apiKey != principal) {
                 throw BadCredentialsException("The API key was not found or not the expected value.")
             }
             authentication.isAuthenticated = true
@@ -38,9 +36,10 @@ open class SecurityConfiguration(
                 configurationSource = corsConfigurationSource()
             }
             csrf {
-                requireCsrfProtectionMatcher = RequestMatcher {
-                    it.servletPath.equals("/preview")
-                }
+                requireCsrfProtectionMatcher =
+                    RequestMatcher {
+                        it.servletPath.equals("/preview")
+                    }
 
                 val csrfRepository = CustomCsrfTokenRepository.withHttpOnlyFalse()
                 csrfRepository.setAllowedOrigins(applicationSettings.allowedOrigins.split(","))

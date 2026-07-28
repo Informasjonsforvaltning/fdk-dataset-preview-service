@@ -5,9 +5,7 @@ import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.ConfigurableApplicationContext
 
-
 abstract class ApiTestContext {
-
     @LocalServerPort
     var port: Int = 0
 
@@ -23,4 +21,3 @@ abstract class ApiTestContext {
         }
     }
 }
-
