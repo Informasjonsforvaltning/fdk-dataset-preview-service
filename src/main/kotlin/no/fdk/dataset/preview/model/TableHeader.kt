@@ -1,14 +1,15 @@
 package no.fdk.dataset.preview.model
 
 data class TableHeader(
-    var columns: List<String>,
+    val columns: List<String>,
 ) {
-    fun beautify() {
-        columns =
-            columns.map { column ->
-                column
-                    .replaceFirstChar { it.uppercaseChar() }
-                    .replace("_", " ")
-            }
-    }
+    fun beautified(): TableHeader =
+        copy(
+            columns =
+                columns.map { column ->
+                    column
+                        .replaceFirstChar { it.uppercaseChar() }
+                        .replace("_", " ")
+                },
+        )
 }

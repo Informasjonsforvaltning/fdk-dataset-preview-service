@@ -491,8 +491,7 @@ class PreviewService(
         val maxDataRows = getMaxNumberOfRows(rows)
         val endRowsIndex = minOf(endHeaderIndex + maxDataRows, tableRows.size)
 
-        val header = TableHeader(tableRows.subList(startHeaderIndex, endHeaderIndex)[0].columns)
-        header.beautify()
+        val header = TableHeader(tableRows.subList(startHeaderIndex, endHeaderIndex)[0].columns).beautified()
 
         val table = Table(header, tableRows.subList(endHeaderIndex, endRowsIndex))
         return Preview(table = table, plain = null)
@@ -578,7 +577,7 @@ class PreviewService(
         parser: CSVParser,
         maxNumberOfRows: Int,
     ): Table {
-        var tableHeader = TableHeader(arrayListOf())
+        var tableHeader = TableHeader(emptyList())
         val tableRows = arrayListOf<TableRow>()
         val it = parser.iterator()
         if (it.hasNext()) {
@@ -587,8 +586,7 @@ class PreviewService(
                     it.next().map { headerValue ->
                         ContentSanitizer.sanitizeCellContent(headerValue) // Sanitize CSV header content to prevent XSS
                     },
-                )
-            tableHeader.beautify()
+                ).beautified()
         }
 
         while (it.hasNext() && (maxNumberOfRows <= 0 || tableRows.size < maxNumberOfRows)) {
