@@ -113,6 +113,56 @@ class PreviewServiceTest {
     }
 
     @Test
+    fun test_if_xls_resource_parses_as_valid_table() {
+        val responseBody: ResponseBody = mock()
+        whenever(responseBody.byteStream()).thenReturn(
+            javaClass.classLoader.getResourceAsStream("test.xls"))
+        whenever(responseBody.contentType()).thenReturn(
+            "application/octet-stream".toMediaTypeOrNull())
+
+        val resourceUrl = "http://domain.com/test.xls"
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
+
+        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val table = preview.table!!
+
+        Assertions.assertEquals("Id", table.header.columns[0])
+        Assertions.assertEquals("Name", table.header.columns[1])
+        Assertions.assertEquals("Value", table.header.columns[2])
+        Assertions.assertEquals(3, table.rows.size)
+        Assertions.assertEquals("1", table.rows[0].columns[0])
+        Assertions.assertEquals("Alpha", table.rows[0].columns[1])
+        Assertions.assertEquals("100", table.rows[0].columns[2])
+        Assertions.assertEquals("Gamma", table.rows[2].columns[1])
+        Assertions.assertNull(preview.plain)
+    }
+
+    @Test
+    fun test_if_xls_with_ms_excel_content_type_parses_as_valid_table() {
+        val responseBody: ResponseBody = mock()
+        whenever(responseBody.byteStream()).thenReturn(
+            javaClass.classLoader.getResourceAsStream("test.xls"))
+        whenever(responseBody.contentType()).thenReturn(
+            "application/vnd.ms-excel".toMediaTypeOrNull())
+
+        val resourceUrl = "http://domain.com/test.xls"
+        whenever(downloader.download(eq(resourceUrl), any<(ResponseBody) -> Preview>())).thenAnswer { invocation ->
+            val block = invocation.getArgument<(ResponseBody) -> Preview>(1)
+            block(responseBody)
+        }
+
+        val preview = previewService.readAndParseResource(resourceUrl, 10)
+        val table = preview.table!!
+
+        Assertions.assertEquals("Id", table.header.columns[0])
+        Assertions.assertEquals("Alpha", table.rows[0].columns[1])
+        Assertions.assertNull(preview.plain)
+    }
+
+    @Test
     fun test_if_oversized_xlsx_is_rejected() {
         val responseBody: ResponseBody = mock()
         whenever(responseBody.byteStream()).thenReturn(

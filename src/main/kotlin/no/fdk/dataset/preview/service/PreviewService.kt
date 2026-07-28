@@ -6,6 +6,7 @@ import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import org.apache.commons.io.IOUtils
 import org.apache.commons.io.input.BOMInputStream
+import org.apache.poi.hssf.usermodel.HSSFWorkbook
 import org.apache.poi.openxml4j.opc.OPCPackage
 import org.apache.poi.openxml4j.opc.PackageAccess
 import org.apache.poi.ss.usermodel.DataFormatter
@@ -27,6 +28,7 @@ import org.xml.sax.InputSource
 import org.xml.sax.SAXException
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -124,6 +126,9 @@ class PreviewService(
                         isXlsx(body.contentType().toString()) || isXlsxFile(resourceUrl) -> xlsxPreview(
                             rows,
                             inputStream)
+                        isXlsFile(resourceUrl) -> xlsPreview(
+                            rows,
+                            inputStream)
                         isCsv(body.contentType().toString()) || isCsvFile(resourceUrl) ->
                             if (!inputStream.markSupported())
                                 downloader.download(resourceUrl, { secondBody ->
@@ -172,6 +177,9 @@ class PreviewService(
 
                     if (isXlsxFile(zipEntry.name)) {
                         return xlsxPreview(rows, zis)
+                    }
+                    if (isXlsFile(zipEntry.name)) {
+                        return xlsPreview(rows, zis)
                     }
                     if (isCsvFile(zipEntry.name)) {
                         val bis = zis.toByteArrayInputStream()
@@ -335,6 +343,80 @@ class PreviewService(
             throw PreviewException("Invalid Excel file content")
         }
 
+        return buildExcelPreview(tableRows, lastCellNum, rows)
+    }
+
+    private fun xlsPreview(rows: Int?, inputStream: InputStream): Preview {
+        logDebug("Parsing legacy Excel (.xls)")
+
+        val maxRowsToProcess = getMaxNumberOfRows(rows) * 2
+        val startTime = System.currentTimeMillis()
+        val tableRows = arrayListOf<TableRow>()
+        var lastCellNum = 0
+        val formatter = DataFormatter()
+
+        val tempFile = inputStream.copyToTempFile(maxFileSizeBytes, ".xls")
+        try {
+            FileInputStream(tempFile.toFile()).use { fileInputStream ->
+                HSSFWorkbook(fileInputStream).use { workbook ->
+                    if (workbook.numberOfSheets == 0) {
+                        throw PreviewException("Invalid Excel file content")
+                    }
+
+                    val sheet = workbook.getSheetAt(0)
+                    for (rowIndex in 0..sheet.lastRowNum) {
+                        if (System.currentTimeMillis() - startTime > maxProcessingTimeSeconds * 1000) {
+                            throw PreviewException("File processing timeout exceeded")
+                        }
+                        if (tableRows.size >= maxRowsToProcess) {
+                            logDebug("Excel processing limited to $maxRowsToProcess rows for security")
+                            break
+                        }
+
+                        val row = sheet.getRow(rowIndex) ?: continue
+                        val lastCellInRow = row.lastCellNum.toInt().coerceAtMost(MAX_COLUMNS)
+                        if (lastCellInRow <= 0) {
+                            tableRows.add(TableRow(emptyList()))
+                            continue
+                        }
+
+                        val currentRow = ArrayList<String>(lastCellInRow)
+                        for (col in 0 until lastCellInRow) {
+                            val cell = row.getCell(col)
+                            currentRow.add(
+                                ContentSanitizer.sanitizeCellContent(
+                                    if (cell != null) formatter.formatCellValue(cell) else ""
+                                )
+                            )
+                        }
+
+                        lastCellNum = when {
+                            currentRow.size <= lastCellNum -> lastCellNum
+                            currentRow.lastOrNull()?.isNotEmpty() == true -> currentRow.size
+                            else -> lastCellNum
+                        }
+
+                        tableRows.add(TableRow(currentRow.toList()))
+                    }
+                }
+            }
+        } catch (e: PreviewException) {
+            throw e
+        } catch (e: Exception) {
+            logDebug("Failed to parse Excel", e)
+            throw PreviewException("Failed to parse Excel file")
+        } finally {
+            tempFile.deleteIfExists()
+        }
+
+        if (tableRows.isEmpty()) {
+            throw PreviewException("Invalid Excel file content")
+        }
+
+        return buildExcelPreview(tableRows, lastCellNum, rows)
+    }
+
+    private fun buildExcelPreview(tableRows: List<TableRow>, lastCellNum: Int, rows: Int?): Preview {
         val headerIndex = if (lastCellNum > 0) {
             tableRows.indexOfFirst {
                 it.columns.size == lastCellNum && it.columns[lastCellNum - 1].isNotEmpty()
@@ -345,11 +427,8 @@ class PreviewService(
 
         val startHeaderIndex = if (headerIndex == -1) 0 else headerIndex
         val endHeaderIndex = startHeaderIndex + 1
-        val endRowsIndex =
-            if (endHeaderIndex + getMaxNumberOfRows(rows) <= tableRows.size - 1)
-                endHeaderIndex + getMaxNumberOfRows(rows)
-            else
-                tableRows.size - 1
+        val maxDataRows = getMaxNumberOfRows(rows)
+        val endRowsIndex = minOf(endHeaderIndex + maxDataRows, tableRows.size)
 
         val header = TableHeader(tableRows.subList(startHeaderIndex, endHeaderIndex)[0].columns)
         header.beautify()
@@ -358,8 +437,8 @@ class PreviewService(
         return Preview(table = table, plain = null)
     }
 
-    private fun InputStream.copyToTempFile(maxBytes: Long): Path {
-        val tempFile = Files.createTempFile("fdk-preview-", ".xlsx")
+    private fun InputStream.copyToTempFile(maxBytes: Long, suffix: String = ".xlsx"): Path {
+        val tempFile = Files.createTempFile("fdk-preview-", suffix)
         try {
             tempFile.outputStream().use { out ->
                 val buffer = ByteArray(8192)
@@ -471,6 +550,7 @@ class PreviewService(
     private fun isSupportedFile(fileName: String): Boolean =
         when {
             isXlsxFile(fileName) -> true
+            isXlsFile(fileName) -> true
             isCsvFile(fileName) -> true
             isPlainFile(fileName) -> true
             else -> false
@@ -482,10 +562,15 @@ class PreviewService(
             else -> false
         }
 
+    private fun isXlsFile(fileName: String): Boolean =
+        when {
+            fileName.endsWith(".xls") -> true
+            else -> false
+        }
+
     private fun isCsvFile(fileName: String): Boolean =
         when {
             fileName.endsWith(".csv") -> true
-            fileName.endsWith(".xls") -> true
             else -> false
         }
 
