@@ -31,35 +31,33 @@ private val mapper = jacksonObjectMapper()
 @ContextConfiguration(initializers = [ApiTestContext.Initializer::class])
 @Tag("integration")
 class PreviewContractTest : ApiTestContext() {
+    private fun postPreview(
+        resourceUrl: String,
+        rows: Int,
+        apiKey: String? = "my-api-key",
+    ) = authorizedRequest(
+        "/preview",
+        port,
+        mapper.writeValueAsString(PreviewRequest(resourceUrl, rows)),
+        apiKey,
+        HttpMethod.POST,
+    )
+
+    private fun previewFrom(response: Map<String, Any?>): Preview = mapper.readValue("${response["body"]}", Preview::class.java)
+
     @Test
     fun `Unauthorized when api token is not included`() {
         assertThrows<CsrfTestException> {
-            val previewRequest = PreviewRequest("http://localhost:5050/download", 5)
-            val rsp =
-                authorizedRequest(
-                    "/preview",
-                    port,
-                    mapper.writeValueAsString(previewRequest),
-                    null,
-                    HttpMethod.POST,
-                )
+            postPreview("http://localhost:5050/download", 5, apiKey = null)
         }
     }
 
     @Test
     fun ok_csv() {
-        val previewRequest = PreviewRequest("http://localhost:5050/download/csv", 5)
-        val rsp =
-            authorizedRequest(
-                "/preview",
-                port,
-                mapper.writeValueAsString(previewRequest),
-                "my-api-key",
-                HttpMethod.POST,
-            )
+        val rsp = postPreview("http://localhost:5050/download/csv", 5)
         assertEquals(HttpStatus.OK.value(), rsp["status"])
 
-        val preview = mapper.readValue("${rsp["body"]}", Preview::class.java)
+        val preview = previewFrom(rsp)
         assertEquals("Orgnr", preview.table!!.header.columns[0])
         assertEquals(5, preview.table!!.rows.size)
         assertNull(preview.plain)
@@ -67,18 +65,10 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun ok_csv_zip() {
-        val previewRequest = PreviewRequest("http://localhost:5050/download/csv-zip", 5)
-        val rsp =
-            authorizedRequest(
-                "/preview",
-                port,
-                mapper.writeValueAsString(previewRequest),
-                "my-api-key",
-                HttpMethod.POST,
-            )
+        val rsp = postPreview("http://localhost:5050/download/csv-zip", 5)
         assertEquals(HttpStatus.OK.value(), rsp["status"])
 
-        val preview = mapper.readValue("${rsp["body"]}", Preview::class.java)
+        val preview = previewFrom(rsp)
         assertEquals("Orgnr", preview.table!!.header.columns[0])
         assertEquals(5, preview.table!!.rows.size)
         assertNull(preview.plain)
@@ -86,18 +76,10 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun ok_xlsx_zip() {
-        val previewRequest = PreviewRequest("http://localhost:5050/download/xlsx-zip", 10)
-        val rsp =
-            authorizedRequest(
-                "/preview",
-                port,
-                mapper.writeValueAsString(previewRequest),
-                "my-api-key",
-                HttpMethod.POST,
-            )
+        val rsp = postPreview("http://localhost:5050/download/xlsx-zip", 10)
         assertEquals(HttpStatus.OK.value(), rsp["status"])
 
-        val preview = mapper.readValue("${rsp["body"]}", Preview::class.java)
+        val preview = previewFrom(rsp)
         val table = preview.table!!
         Assertions.assertEquals("Ansvar:", table.header.columns[0])
         Assertions.assertEquals("2013", table.header.columns[6])
@@ -107,18 +89,10 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun ok_xls() {
-        val previewRequest = PreviewRequest("http://localhost:5050/download/test.xls", 10)
-        val rsp =
-            authorizedRequest(
-                "/preview",
-                port,
-                mapper.writeValueAsString(previewRequest),
-                "my-api-key",
-                HttpMethod.POST,
-            )
+        val rsp = postPreview("http://localhost:5050/download/test.xls", 10)
         assertEquals(HttpStatus.OK.value(), rsp["status"])
 
-        val preview = mapper.readValue("${rsp["body"]}", Preview::class.java)
+        val preview = previewFrom(rsp)
         val table = preview.table!!
         Assertions.assertEquals("Id", table.header.columns[0])
         Assertions.assertEquals("Name", table.header.columns[1])
@@ -130,18 +104,10 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun ok_xls_zip() {
-        val previewRequest = PreviewRequest("http://localhost:5050/download/xls-zip", 10)
-        val rsp =
-            authorizedRequest(
-                "/preview",
-                port,
-                mapper.writeValueAsString(previewRequest),
-                "my-api-key",
-                HttpMethod.POST,
-            )
+        val rsp = postPreview("http://localhost:5050/download/xls-zip", 10)
         assertEquals(HttpStatus.OK.value(), rsp["status"])
 
-        val preview = mapper.readValue("${rsp["body"]}", Preview::class.java)
+        val preview = previewFrom(rsp)
         val table = preview.table!!
         Assertions.assertEquals("Id", table.header.columns[0])
         Assertions.assertEquals("Beta", table.rows[1].columns[1])
@@ -150,18 +116,10 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun ok_json_zip() {
-        val previewRequest = PreviewRequest("http://localhost:5050/download/json-zip", 10)
-        val rsp =
-            authorizedRequest(
-                "/preview",
-                port,
-                mapper.writeValueAsString(previewRequest),
-                "my-api-key",
-                HttpMethod.POST,
-            )
+        val rsp = postPreview("http://localhost:5050/download/json-zip", 10)
         assertEquals(HttpStatus.OK.value(), rsp["status"])
 
-        val preview = mapper.readValue("${rsp["body"]}", Preview::class.java)
+        val preview = previewFrom(rsp)
         val table = preview.table
         val resource = javaClass.classLoader.getResource("test.json")!!
 
@@ -176,43 +134,19 @@ class PreviewContractTest : ApiTestContext() {
 
     @Test
     fun `Bad request`() {
-        val previewRequest = PreviewRequest("http://localhost:5050/download-link-does-not-exist", 5)
-        val rsp =
-            authorizedRequest(
-                "/preview",
-                port,
-                mapper.writeValueAsString(previewRequest),
-                "my-api-key",
-                HttpMethod.POST,
-            )
+        val rsp = postPreview("http://localhost:5050/download-link-does-not-exist", 5)
         assertEquals(HttpStatus.BAD_REQUEST.value(), rsp["status"])
     }
 
     @Test
     fun `Invalid url`() {
-        val previewRequest = PreviewRequest("https://local", 5)
-        val rsp =
-            authorizedRequest(
-                "/preview",
-                port,
-                mapper.writeValueAsString(previewRequest),
-                "my-api-key",
-                HttpMethod.POST,
-            )
+        val rsp = postPreview("https://local", 5)
         assertEquals(HttpStatus.BAD_REQUEST.value(), rsp["status"])
     }
 
     @Test
     fun `Illegal url`() {
-        val previewRequest = PreviewRequest("https://kubernetes.default.svc", 5)
-        val rsp =
-            authorizedRequest(
-                "/preview",
-                port,
-                mapper.writeValueAsString(previewRequest),
-                "my-api-key",
-                HttpMethod.POST,
-            )
+        val rsp = postPreview("https://kubernetes.default.svc", 5)
         assertEquals(HttpStatus.BAD_REQUEST.value(), rsp["status"])
     }
 }
