@@ -1,5 +1,6 @@
 package no.fdk.dataset.preview.service
 
+import no.fdk.dataset.preview.metrics.PreviewMetrics
 import no.fdk.dataset.preview.util.validate
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -12,6 +13,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.concurrent.TimeUnit
+import kotlin.time.TimeSource
 
 @Component
 class FileDownloader {
@@ -54,6 +56,8 @@ class FileDownloader {
             }
         }
 
+        val downloadStartTime = TimeSource.Monotonic.markNow()
+
         try {
             val request =
                 Request
@@ -68,12 +72,32 @@ class FileDownloader {
                 val body = response.body
                 val responseCode = response.code
                 if (responseCode in HttpURLConnection.HTTP_OK until HttpURLConnection.HTTP_MULT_CHOICE && body != null) {
-                    return block(body)
+                    val bytes = body.contentLength()
+                    val result = block(body)
+                    PreviewMetrics.recordDownloadSuccess(
+                        resourceUrl = url,
+                        statusCode = responseCode,
+                        duration = downloadStartTime.elapsedNow(),
+                        bytes = bytes,
+                    )
+                    return result
                 } else {
+                    PreviewMetrics.recordDownloadFailure(
+                        resourceUrl = url,
+                        statusCode = responseCode,
+                        duration = downloadStartTime.elapsedNow(),
+                    )
                     throw DownloadException("Download failed with status $responseCode")
                 }
             }
+        } catch (e: DownloadException) {
+            throw e
         } catch (e: Exception) {
+            PreviewMetrics.recordDownloadFailure(
+                resourceUrl = url,
+                statusCode = null,
+                duration = downloadStartTime.elapsedNow(),
+            )
             throw DownloadException("Download failed")
         }
     }
