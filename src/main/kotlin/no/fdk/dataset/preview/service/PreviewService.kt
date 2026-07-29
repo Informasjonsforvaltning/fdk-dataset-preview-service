@@ -21,7 +21,7 @@ class PreviewService(
         resourceUrl: String,
         rows: Int?,
     ): Preview {
-        logDebug("Read and parse resource $resourceUrl")
+        LOGGER.logDebug("Read and parse resource $resourceUrl")
 
         try {
             return downloader.download(resourceUrl, { body ->
@@ -68,7 +68,7 @@ class PreviewService(
                 }
             })
         } catch (e: DownloadException) {
-            logDebug("Unable to download resource $resourceUrl", e)
+            LOGGER.logDebug("Unable to download resource $resourceUrl", e)
             throw PreviewException("Failed to download file", ErrorType.DOWNLOAD_FAILED)
         }
     }
@@ -98,19 +98,6 @@ class PreviewService(
                 charset,
             )
         }
-
-    private fun logDebug(message: String) {
-        logDebug(message, null)
-    }
-
-    private fun logDebug(
-        message: String,
-        throwable: Throwable?,
-    ) {
-        if (LOGGER.isDebugEnabled) {
-            LOGGER.debug(message, throwable)
-        }
-    }
 
     companion object {
         private val LOGGER: Logger = LoggerFactory.getLogger(PreviewService::class.java)

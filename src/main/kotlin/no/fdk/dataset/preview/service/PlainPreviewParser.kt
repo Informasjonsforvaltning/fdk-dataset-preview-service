@@ -19,17 +19,11 @@ class PlainPreviewParser {
         mediaType: String?,
         charset: Charset?,
     ): Preview {
-        logDebug("Fetch plain content")
+        logger.logDebug("Fetch plain content")
 
         val content = IOUtils.toString(inputStream, charset ?: Charset.forName("UTF-8"))
         val sanitizedContent = ContentSanitizer.removeDangerousContent(content)
         val plain = Plain(sanitizedContent, mediaType ?: "")
         return Preview(table = null, plain = plain)
-    }
-
-    private fun logDebug(message: String) {
-        if (logger.isDebugEnabled) {
-            logger.debug(message)
-        }
     }
 }
