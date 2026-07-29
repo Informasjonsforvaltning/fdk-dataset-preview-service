@@ -39,6 +39,7 @@ class PreviewMetricsTest {
                 .tag("status", "success")
                 .tag("format", "csv")
                 .tag("resource_url", url)
+                .tag("error_type", "none")
                 .counter()
 
         assertEquals(1.0, counter?.count())
@@ -69,6 +70,7 @@ class PreviewMetricsTest {
                 .tag("status", "success")
                 .tag("format", "csv")
                 .tag("resource_url", url)
+                .tag("error_type", "none")
                 .counter()
         val xlsxCounter =
             meterRegistry
@@ -76,6 +78,7 @@ class PreviewMetricsTest {
                 .tag("status", "success")
                 .tag("format", "xlsx")
                 .tag("resource_url", url)
+                .tag("error_type", "none")
                 .counter()
         val zipCounter =
             meterRegistry
@@ -83,6 +86,7 @@ class PreviewMetricsTest {
                 .tag("status", "success")
                 .tag("format", "zip")
                 .tag("resource_url", url)
+                .tag("error_type", "none")
                 .counter()
 
         assertEquals(1.0, csvCounter?.count())
@@ -100,6 +104,7 @@ class PreviewMetricsTest {
             meterRegistry
                 .find("preview_count")
                 .tag("status", "error")
+                .tag("format", "none")
                 .tag("error_type", "DOWNLOAD_FAILED")
                 .tag("resource_url", url)
                 .counter()
@@ -119,6 +124,7 @@ class PreviewMetricsTest {
             meterRegistry
                 .find("preview_count")
                 .tag("status", "error")
+                .tag("format", "none")
                 .tag("error_type", "DOWNLOAD_FAILED")
                 .tag("resource_url", url)
                 .counter()
@@ -126,6 +132,7 @@ class PreviewMetricsTest {
             meterRegistry
                 .find("preview_count")
                 .tag("status", "error")
+                .tag("format", "none")
                 .tag("error_type", "UNSUPPORTED_FORMAT")
                 .tag("resource_url", url)
                 .counter()
@@ -133,6 +140,7 @@ class PreviewMetricsTest {
             meterRegistry
                 .find("preview_count")
                 .tag("status", "error")
+                .tag("format", "none")
                 .tag("error_type", "FILE_TOO_LARGE")
                 .tag("resource_url", url)
                 .counter()
@@ -153,6 +161,7 @@ class PreviewMetricsTest {
             meterRegistry
                 .find("preview_count")
                 .tag("status", "error")
+                .tag("format", "none")
                 .tag("error_type", "DOWNLOAD_FAILED")
                 .tag("resource_url", url)
                 .counter()
@@ -184,6 +193,7 @@ class PreviewMetricsTest {
                 .tag("method", "POST")
                 .tag("path", "/preview")
                 .tag("status", "success")
+                .tag("error_type", "none")
                 .counter()
 
         assertEquals(1.0, counter?.count())
