@@ -100,6 +100,20 @@ class PreviewServiceTest {
     }
 
     @Test
+    fun test_if_zip_resource_parses_when_content_type_has_parameters() {
+        val resourceUrl = "http://domain.com/test.csv.zip"
+        mockDownload(
+            resourceUrl,
+            "application/zip; charset=binary",
+            "test.csv.zip",
+            "test.csv.zip",
+        )
+
+        val preview = parsePreview(resourceUrl)
+        assertCsvLikePreview(preview.table!!)
+    }
+
+    @Test
     fun test_if_msexcel_with_additional_chars_in_contenttype_resource_parses_as_valid_table() {
         val resourceUrl = "http://domain.com/test.csv"
         mockDownload(resourceUrl, "application~/vnd.ms-excel~; charset=utf-8", "test.csv", "test.csv")
