@@ -25,7 +25,7 @@ class ApplicationStatusContractTest : ApiTestContext() {
     @Test
     fun `Ping should return http status OK, without authentication`() {
         val request = RestTemplate()
-        val response = request.exchange("http://localhost:$port/ping", HttpMethod.GET, null, String::class.java)
+        val response = request.exchange("http://localhost:$port/actuator/health/ping", HttpMethod.GET, null, String::class.java)
 
         assertEquals(HttpStatus.OK.value(), response.statusCode.value())
     }
@@ -33,7 +33,7 @@ class ApplicationStatusContractTest : ApiTestContext() {
     @Test
     fun `Ready should return http status OK, without authentication`() {
         val request = RestTemplate()
-        val response = request.exchange("http://localhost:$port/ready", HttpMethod.GET, null, String::class.java)
+        val response = request.exchange("http://localhost:$port/actuator/health/ready", HttpMethod.GET, null, String::class.java)
 
         assertEquals(HttpStatus.OK.value(), response.statusCode.value())
     }

@@ -51,8 +51,9 @@ open class SecurityConfiguration(
             addFilterBefore<BasicAuthenticationFilter>(filter)
             authorizeHttpRequests {
                 authorize(HttpMethod.OPTIONS, "/**", permitAll)
-                authorize(HttpMethod.GET, "/ping", permitAll)
-                authorize(HttpMethod.GET, "/ready", permitAll)
+                authorize(HttpMethod.GET, "/actuator/health/ping", permitAll)
+                authorize(HttpMethod.GET, "/actuator/health/ready", permitAll)
+                authorize(HttpMethod.GET, "/actuator/prometheus", permitAll)
                 authorize(HttpMethod.GET, "/swagger-ui/**", permitAll)
                 authorize(HttpMethod.GET, "/v3/**", permitAll)
                 authorize(anyRequest, authenticated)
