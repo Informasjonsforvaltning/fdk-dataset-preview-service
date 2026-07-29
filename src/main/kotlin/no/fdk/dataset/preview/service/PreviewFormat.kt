@@ -9,6 +9,15 @@ internal enum class PreviewFormat {
     ;
 
     companion object {
+        private val XLSX_CONTENT_TYPE_REGEX: Regex =
+            Regex(
+                """application/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet""",
+            )
+        private val CSV_CONTENT_TYPE_REGEX: Regex = Regex("""\+?csv""")
+        private val EXCEL_CONTENT_TYPE_REGEX: Regex = Regex("""\+?vnd\.ms-excel""")
+        private val XML_CONTENT_TYPE_REGEX: Regex = Regex("""\+?xml""")
+        private val JSON_CONTENT_TYPE_REGEX: Regex = Regex("""\+?json""")
+
         fun detect(
             contentType: String?,
             resourceName: String,
@@ -34,23 +43,20 @@ internal enum class PreviewFormat {
         private fun isZipContentType(contentType: String?): Boolean = contentType == "application/zip"
 
         private fun isXlsxContentType(contentType: String?): Boolean =
-            contentType != null &&
-                """application/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet"""
-                    .toRegex()
-                    .containsMatchIn(contentType)
+            contentType != null && XLSX_CONTENT_TYPE_REGEX.containsMatchIn(contentType)
 
         private fun isCsvContentType(contentType: String?): Boolean =
             contentType != null &&
                 (
-                    """\+?csv""".toRegex().containsMatchIn(contentType) ||
-                        """\+?vnd\.ms-excel""".toRegex().containsMatchIn(contentType)
+                    CSV_CONTENT_TYPE_REGEX.containsMatchIn(contentType) ||
+                        EXCEL_CONTENT_TYPE_REGEX.containsMatchIn(contentType)
                 )
 
         private fun isPlainContentType(contentType: String?): Boolean =
             contentType != null &&
                 (
-                    """\+?xml""".toRegex().containsMatchIn(contentType) ||
-                        """\+?json""".toRegex().containsMatchIn(contentType)
+                    XML_CONTENT_TYPE_REGEX.containsMatchIn(contentType) ||
+                        JSON_CONTENT_TYPE_REGEX.containsMatchIn(contentType)
                 )
 
         private fun String.hasExtension(vararg extensions: String): Boolean = extensions.any { endsWith(it) }
