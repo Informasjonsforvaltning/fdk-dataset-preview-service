@@ -28,10 +28,10 @@ class CsvPreviewParser(
         secondInputStream: InputStream?,
         charset: Charset?,
     ): Preview {
-        logDebug("Parsing CSV")
+        logger.logDebug("Parsing CSV")
 
         val delimiter = detectDelimiter(inputStream)
-        logDebug("Detected delimiter $delimiter")
+        logger.logDebug("Detected delimiter $delimiter")
 
         CSVFormat.DEFAULT
             .builder()
@@ -118,11 +118,5 @@ class CsvPreviewParser(
         }
 
         return Table(tableHeader, tableRows)
-    }
-
-    private fun logDebug(message: String) {
-        if (logger.isDebugEnabled) {
-            logger.debug(message)
-        }
     }
 }

@@ -28,7 +28,7 @@ class ZipPreviewParser(
         rows: Int?,
         inputStream: InputStream,
     ): Preview {
-        logDebug("Extracting zip")
+        logger.logDebug("Extracting zip")
 
         val zis = ZipInputStream(inputStream)
 
@@ -116,10 +116,4 @@ class ZipPreviewParser(
     private fun InputStream.getMediaType(): MediaType = Tika().detector.detect(this, Metadata())
 
     private fun MediaType.getCharset(): Charset = Charset.forName(parameters.getOrDefault("charset", "UTF-8"))
-
-    private fun logDebug(message: String) {
-        if (logger.isDebugEnabled) {
-            logger.debug(message)
-        }
-    }
 }

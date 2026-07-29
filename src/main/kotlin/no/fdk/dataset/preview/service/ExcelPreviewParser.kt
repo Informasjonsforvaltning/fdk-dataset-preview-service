@@ -41,7 +41,7 @@ class ExcelPreviewParser(
         rows: Int?,
         inputStream: InputStream,
     ): Preview {
-        logDebug("Parsing Excel")
+        logger.logDebug("Parsing Excel")
 
         val maxRowsToProcess = limits.getMaxNumberOfRows(rows) * 2
         val startTime = System.currentTimeMillis()
@@ -74,7 +74,7 @@ class ExcelPreviewParser(
                                     throw PreviewException("File processing timeout exceeded", ErrorType.PROCESSING_TIMEOUT)
                                 }
                                 if (tableRows.size >= maxRowsToProcess) {
-                                    logDebug("Excel processing limited to $maxRowsToProcess rows for security")
+                                    logger.logDebug("Excel processing limited to $maxRowsToProcess rows for security")
                                     throw SheetParseLimitReached()
                                 }
                                 currentRow = arrayListOf()
@@ -150,7 +150,7 @@ class ExcelPreviewParser(
                 }
 
                 else -> {
-                    logDebug("Failed to parse Excel", e)
+                    logger.logDebug("Failed to parse Excel", e)
                     throw PreviewException("Failed to parse Excel file", ErrorType.PARSE_ERROR)
                 }
             }
@@ -169,7 +169,7 @@ class ExcelPreviewParser(
         rows: Int?,
         inputStream: InputStream,
     ): Preview {
-        logDebug("Parsing legacy Excel (.xls)")
+        logger.logDebug("Parsing legacy Excel (.xls)")
 
         val maxRowsToProcess = limits.getMaxNumberOfRows(rows) * 2
         val startTime = System.currentTimeMillis()
@@ -191,7 +191,7 @@ class ExcelPreviewParser(
                             throw PreviewException("File processing timeout exceeded", ErrorType.PROCESSING_TIMEOUT)
                         }
                         if (tableRows.size >= maxRowsToProcess) {
-                            logDebug("Excel processing limited to $maxRowsToProcess rows for security")
+                            logger.logDebug("Excel processing limited to $maxRowsToProcess rows for security")
                             break
                         }
 
@@ -226,7 +226,7 @@ class ExcelPreviewParser(
         } catch (e: PreviewException) {
             throw e
         } catch (e: Exception) {
-            logDebug("Failed to parse Excel", e)
+            logger.logDebug("Failed to parse Excel", e)
             throw PreviewException("Failed to parse Excel file", ErrorType.PARSE_ERROR)
         } finally {
             tempFile.deleteIfExists()
@@ -298,18 +298,5 @@ class ExcelPreviewParser(
             }
         }
         return current
-    }
-
-    private fun logDebug(message: String) {
-        logDebug(message, null)
-    }
-
-    private fun logDebug(
-        message: String,
-        throwable: Throwable?,
-    ) {
-        if (logger.isDebugEnabled) {
-            logger.debug(message, throwable)
-        }
     }
 }
