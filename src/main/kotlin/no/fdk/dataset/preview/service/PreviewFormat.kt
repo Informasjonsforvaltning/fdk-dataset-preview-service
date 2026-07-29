@@ -1,5 +1,7 @@
 package no.fdk.dataset.preview.service
 
+import java.util.Locale
+
 internal enum class PreviewFormat {
     ZIP,
     XLSX,
@@ -40,7 +42,11 @@ internal enum class PreviewFormat {
                 else -> null
             }
 
-        private fun isZipContentType(contentType: String?): Boolean = contentType == "application/zip"
+        private fun isZipContentType(contentType: String?): Boolean {
+            if (contentType == null) return false
+            val baseType = contentType.substringBefore(';').trim().lowercase(Locale.ROOT)
+            return baseType == "application/zip"
+        }
 
         private fun isXlsxContentType(contentType: String?): Boolean =
             contentType != null && XLSX_CONTENT_TYPE_REGEX.containsMatchIn(contentType)
