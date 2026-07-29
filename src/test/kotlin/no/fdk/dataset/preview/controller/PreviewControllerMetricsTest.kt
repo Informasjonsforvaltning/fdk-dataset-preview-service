@@ -52,6 +52,7 @@ class PreviewControllerMetricsTest {
                 .tag("method", "POST")
                 .tag("path", "/preview")
                 .tag("status", "success")
+                .tag("error_type", "none")
                 .counter()
 
         assertEquals(1.0, counter?.count())
@@ -96,6 +97,7 @@ class PreviewControllerMetricsTest {
                 .tag("method", "GET")
                 .tag("path", "/preview")
                 .tag("status", "success")
+                .tag("error_type", "none")
                 .counter()
 
         assertEquals(1.0, counter?.count())

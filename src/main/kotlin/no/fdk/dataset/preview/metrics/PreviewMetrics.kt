@@ -7,6 +7,8 @@ import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
 object PreviewMetrics {
+    private const val NONE = "none"
+
     fun recordSuccess(
         format: String,
         resourceUrl: String,
@@ -21,6 +23,8 @@ object PreviewMetrics {
                 format,
                 "resource_url",
                 resourceUrl,
+                "error_type",
+                NONE,
             ).increment()
 
         Metrics
@@ -42,10 +46,12 @@ object PreviewMetrics {
                 "preview_count",
                 "status",
                 "error",
-                "error_type",
-                errorType.code,
+                "format",
+                NONE,
                 "resource_url",
                 resourceUrl,
+                "error_type",
+                errorType.code,
             ).increment()
     }
 
@@ -139,6 +145,8 @@ object PreviewMetrics {
                 path,
                 "status",
                 "success",
+                "error_type",
+                NONE,
             ).increment()
     }
 
