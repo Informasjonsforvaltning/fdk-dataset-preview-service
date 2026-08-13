@@ -37,12 +37,7 @@ class PreviewServiceTest {
             plainPreviewParser,
         )
 
-    private fun mockDownload(
-        resourceUrl: String,
-        contentType: String,
-        vararg resourceStreams: String,
-        contentLength: Long = 0,
-    ) {
+    private fun mockDownload(resourceUrl: String, contentType: String, vararg resourceStreams: String, contentLength: Long = 0) {
         val responseBody: ResponseBody = mock()
         val streams = resourceStreams.map(::resourceStream).toTypedArray()
         whenever(responseBody.byteStream()).thenReturn(streams.first(), *streams.drop(1).toTypedArray())
@@ -60,10 +55,7 @@ class PreviewServiceTest {
     private fun resourceText(resourceName: String) =
         requireNotNull(javaClass.classLoader.getResource(resourceName)).readText(Charsets.UTF_8)
 
-    private fun parsePreview(
-        resourceUrl: String,
-        rows: Int = 10,
-    ): Preview = previewService.readAndParseResource(resourceUrl, rows)
+    private fun parsePreview(resourceUrl: String, rows: Int = 10): Preview = previewService.readAndParseResource(resourceUrl, rows)
 
     private fun assertCsvLikePreview(table: Table) {
         Assertions.assertEquals("Orgnr", table.header.columns[0])
@@ -72,11 +64,7 @@ class PreviewServiceTest {
         Assertions.assertEquals("565.6", table.rows[6].columns[26])
     }
 
-    private fun assertPlainPreview(
-        plain: Plain?,
-        expectedResource: String,
-        expectedContentType: String,
-    ) {
+    private fun assertPlainPreview(plain: Plain?, expectedResource: String, expectedContentType: String) {
         Assertions.assertEquals(resourceText(expectedResource), plain?.value)
         Assertions.assertEquals(expectedContentType, plain?.contentType)
     }

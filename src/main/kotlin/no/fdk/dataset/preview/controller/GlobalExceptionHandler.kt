@@ -30,10 +30,7 @@ class GlobalExceptionHandler {
     private val logger: Logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(PreviewException::class)
-    fun handlePreviewException(
-        ex: PreviewException,
-        request: jakarta.servlet.http.HttpServletRequest,
-    ): ResponseEntity<ErrorResponse> {
+    fun handlePreviewException(ex: PreviewException, request: jakarta.servlet.http.HttpServletRequest): ResponseEntity<ErrorResponse> {
         logger.warn("Preview processing failed: ${ex.message}", ex)
         return errorResponse(HttpStatus.BAD_REQUEST, ex.errorType, request)
     }
@@ -49,30 +46,21 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DownloadException::class)
-    fun handleDownloadException(
-        ex: DownloadException,
-        request: jakarta.servlet.http.HttpServletRequest,
-    ): ResponseEntity<ErrorResponse> {
+    fun handleDownloadException(ex: DownloadException, request: jakarta.servlet.http.HttpServletRequest): ResponseEntity<ErrorResponse> {
         logger.warn("Download error: ${ex.message}", ex)
 
         return errorResponse(HttpStatus.BAD_REQUEST, ErrorType.DOWNLOAD_FAILED, request)
     }
 
     @ExceptionHandler(UrlException::class)
-    fun handleUrlException(
-        ex: UrlException,
-        request: jakarta.servlet.http.HttpServletRequest,
-    ): ResponseEntity<ErrorResponse> {
+    fun handleUrlException(ex: UrlException, request: jakarta.servlet.http.HttpServletRequest): ResponseEntity<ErrorResponse> {
         logger.warn("URL validation failed: ${ex.message}", ex)
 
         return errorResponse(HttpStatus.BAD_REQUEST, ErrorType.SECURITY_VIOLATION, request)
     }
 
     @ExceptionHandler(URISyntaxException::class)
-    fun handleURISyntaxException(
-        ex: URISyntaxException,
-        request: jakarta.servlet.http.HttpServletRequest,
-    ): ResponseEntity<ErrorResponse> {
+    fun handleURISyntaxException(ex: URISyntaxException, request: jakarta.servlet.http.HttpServletRequest): ResponseEntity<ErrorResponse> {
         logger.warn("Invalid URI syntax: ${ex.message}", ex)
 
         return errorResponse(HttpStatus.BAD_REQUEST, ErrorType.INVALID_URL, request)
@@ -173,10 +161,7 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleGenericException(
-        ex: Exception,
-        request: jakarta.servlet.http.HttpServletRequest,
-    ): ResponseEntity<ErrorResponse> {
+    fun handleGenericException(ex: Exception, request: jakarta.servlet.http.HttpServletRequest): ResponseEntity<ErrorResponse> {
         logger.error("Unexpected error occurred", ex)
 
         return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ErrorType.INTERNAL_ERROR, request)
@@ -194,17 +179,16 @@ class GlobalExceptionHandler {
         error: String,
         message: String,
         request: jakarta.servlet.http.HttpServletRequest,
-    ): ResponseEntity<ErrorResponse> =
-        ResponseEntity
-            .status(status)
-            .body(
-                ErrorResponse(
-                    error = error,
-                    message = message,
-                    path = request.requestURI,
-                    requestId = generateRequestId(),
-                ),
-            )
+    ): ResponseEntity<ErrorResponse> = ResponseEntity
+        .status(status)
+        .body(
+            ErrorResponse(
+                error = error,
+                message = message,
+                path = request.requestURI,
+                requestId = generateRequestId(),
+            ),
+        )
 
     private fun generateRequestId(): String = UUID.randomUUID().toString().substring(0, 8)
 }

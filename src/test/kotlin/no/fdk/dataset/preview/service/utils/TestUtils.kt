@@ -15,14 +15,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
 
-class CsrfTestException(
-    message: String,
-) : Exception(message)
+class CsrfTestException(message: String) : Exception(message)
 
-private fun apiGetCSRF(
-    url: String,
-    token: String? = null,
-): Pair<String, String?> {
+private fun apiGetCSRF(url: String, token: String? = null): Pair<String, String?> {
     val connection = URL(url).openConnection() as HttpURLConnection
     token?.let { connection.setRequestProperty("X-API-KEY", it) }
     connection.connect()

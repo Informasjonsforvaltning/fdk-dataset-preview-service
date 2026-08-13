@@ -29,11 +29,7 @@ class CustomCsrfTokenRepository : CsrfTokenRepository {
 
     override fun generateToken(request: HttpServletRequest): CsrfToken = DefaultCsrfToken(headerName, parameterName, createNewToken())
 
-    override fun saveToken(
-        token: CsrfToken?,
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-    ) {
+    override fun saveToken(token: CsrfToken?, request: HttpServletRequest, response: HttpServletResponse) {
         val tokenValue = if (token != null) token.token else ""
 
         var responseCookieBuilder =

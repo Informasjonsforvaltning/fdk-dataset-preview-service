@@ -18,10 +18,7 @@ data class ErrorResponse(
 /**
  * Error types that can be safely exposed to clients
  */
-enum class ErrorType(
-    val code: String,
-    val message: String,
-) {
+enum class ErrorType(val code: String, val message: String) {
     INVALID_URL("INVALID_URL", "The provided URL is invalid or not accessible"),
     FILE_TOO_LARGE("FILE_TOO_LARGE", "The file is too large to process"),
     UNSUPPORTED_FORMAT("UNSUPPORTED_FORMAT", "The file format is not supported"),

@@ -35,10 +35,7 @@ class FileDownloader {
         this.okHttpClient = okHttpBuilder.build()
     }
 
-    fun <T> download(
-        url: String,
-        block: (ResponseBody) -> T,
-    ): T {
+    fun <T> download(url: String, block: (ResponseBody) -> T): T {
         val uri =
             try {
                 URI(url)

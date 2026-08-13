@@ -16,9 +16,7 @@ import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
-open class SecurityConfiguration(
-    private val applicationSettings: ApplicationSettings,
-) {
+open class SecurityConfiguration(private val applicationSettings: ApplicationSettings) {
     @Bean
     open fun filterChain(http: HttpSecurity): SecurityFilterChain {
         val filter = APIKeyAuthFilter("X-API-KEY")

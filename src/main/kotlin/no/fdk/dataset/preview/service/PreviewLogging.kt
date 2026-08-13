@@ -8,10 +8,7 @@ internal fun Logger.logDebug(message: String) {
     }
 }
 
-internal fun Logger.logDebug(
-    message: String,
-    throwable: Throwable?,
-) {
+internal fun Logger.logDebug(message: String, throwable: Throwable?) {
     if (isDebugEnabled) {
         debug(message, throwable)
     }

@@ -106,7 +106,7 @@
             <version>5.4.0</version>
             <scope>test</scope>
         </dependency>
-        
+
         <!-- HTML Sanitization -->
         <dependency>
             <groupId>org.jsoup</groupId>
@@ -266,9 +266,8 @@
                 <version>3.7.1</version>
                 <executions>
                     <execution>
-                        <id>format-and-check</id>
+                        <id>ktlint-check</id>
                         <goals>
-                            <goal>format</goal>
                             <goal>check</goal>
                         </goals>
                     </execution>

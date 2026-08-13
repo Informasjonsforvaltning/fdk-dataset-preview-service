@@ -14,11 +14,7 @@ import java.nio.charset.Charset
 class PlainPreviewParser {
     private val logger: Logger = LoggerFactory.getLogger(PlainPreviewParser::class.java)
 
-    fun parse(
-        inputStream: InputStream,
-        mediaType: String?,
-        charset: Charset?,
-    ): Preview {
+    fun parse(inputStream: InputStream, mediaType: String?, charset: Charset?): Preview {
         logger.logDebug("Fetch plain content")
 
         val content = IOUtils.toString(inputStream, charset ?: Charset.forName("UTF-8"))
