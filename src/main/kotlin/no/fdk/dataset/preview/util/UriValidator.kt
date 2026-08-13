@@ -87,10 +87,7 @@ private fun requireNoPrivateOrInternalIps(resolvedIps: List<String>) {
     }
 }
 
-private fun requireStableDnsResolution(
-    host: String,
-    resolvedIps: List<String>,
-) {
+private fun requireStableDnsResolution(host: String, resolvedIps: List<String>) {
     val recheckIps = resolveHostIPsWithCache(host)
     if (resolvedIps.toSet() != recheckIps.toSet()) {
         throw UrlException("DNS rebinding attack detected")
@@ -112,12 +109,11 @@ private fun resolveHostIPsWithCache(host: String): List<String> {
     return resolved
 }
 
-private fun resolveHostIPs(host: String): List<String> =
-    try {
-        InetAddress.getAllByName(host).map { it.hostAddress }
-    } catch (e: UnknownHostException) {
-        throw UrlException("Hostname cannot be resolved")
-    }
+private fun resolveHostIPs(host: String): List<String> = try {
+    InetAddress.getAllByName(host).map { it.hostAddress }
+} catch (e: UnknownHostException) {
+    throw UrlException("Hostname cannot be resolved")
+}
 
 private fun isValidHostname(hostname: String): Boolean {
     if (hostname.isEmpty() || hostname.length > 253) return false
@@ -131,12 +127,11 @@ private fun isValidHostname(hostname: String): Boolean {
     return HOSTNAME_REGEX.matches(hostname)
 }
 
-private fun isValidIPv6(ipv6: String): Boolean =
-    try {
-        InetAddress.getByName(ipv6) is Inet6Address
-    } catch (e: Exception) {
-        false
-    }
+private fun isValidIPv6(ipv6: String): Boolean = try {
+    InetAddress.getByName(ipv6) is Inet6Address
+} catch (e: Exception) {
+    false
+}
 
 private fun containsSuspiciousPatterns(hostname: String): Boolean =
     SUSPICIOUS_HOST_PATTERNS.any { hostname.contains(it, ignoreCase = true) }

@@ -31,11 +31,7 @@ private val mapper = jacksonObjectMapper()
 @ContextConfiguration(initializers = [ApiTestContext.Initializer::class])
 @Tag("integration")
 class PreviewContractTest : ApiTestContext() {
-    private fun postPreview(
-        resourceUrl: String,
-        rows: Int,
-        apiKey: String? = "my-api-key",
-    ) = authorizedRequest(
+    private fun postPreview(resourceUrl: String, rows: Int, apiKey: String? = "my-api-key") = authorizedRequest(
         "/preview",
         port,
         mapper.writeValueAsString(PreviewRequest(resourceUrl, rows)),

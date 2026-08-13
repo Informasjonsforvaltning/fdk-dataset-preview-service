@@ -17,17 +17,10 @@ import java.nio.charset.Charset
 import java.util.Arrays
 
 @Component
-class CsvPreviewParser(
-    private val limits: PreviewLimits,
-) {
+class CsvPreviewParser(private val limits: PreviewLimits) {
     private val logger: Logger = LoggerFactory.getLogger(CsvPreviewParser::class.java)
 
-    fun parse(
-        rows: Int?,
-        inputStream: InputStream,
-        secondInputStream: InputStream?,
-        charset: Charset?,
-    ): Preview {
+    fun parse(rows: Int?, inputStream: InputStream, secondInputStream: InputStream?, charset: Charset?): Preview {
         logger.logDebug("Parsing CSV")
 
         val delimiter = detectDelimiter(inputStream)
@@ -72,10 +65,7 @@ class CsvPreviewParser(
         }
     }
 
-    private fun readFromStream(
-        stream: InputStream,
-        length: Int,
-    ): ByteArray {
+    private fun readFromStream(stream: InputStream, length: Int): ByteArray {
         val bytes = ByteArray(length)
         var totalRead = 0
         var lastRead = stream.read(bytes)
@@ -91,10 +81,7 @@ class CsvPreviewParser(
         return shorter
     }
 
-    private fun parseCSVToTable(
-        parser: CSVParser,
-        maxNumberOfRows: Int,
-    ): Table {
+    private fun parseCSVToTable(parser: CSVParser, maxNumberOfRows: Int): Table {
         var tableHeader = TableHeader(emptyList())
         val tableRows = arrayListOf<TableRow>()
         val it = parser.iterator()

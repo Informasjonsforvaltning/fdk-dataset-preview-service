@@ -9,11 +9,7 @@ import kotlin.time.toJavaDuration
 object PreviewMetrics {
     private const val NONE = "none"
 
-    fun recordSuccess(
-        format: String,
-        resourceUrl: String,
-        duration: Duration,
-    ) {
+    fun recordSuccess(format: String, resourceUrl: String, duration: Duration) {
         Metrics
             .counter(
                 "preview_count",
@@ -37,10 +33,7 @@ object PreviewMetrics {
             ).record(duration.toJavaDuration())
     }
 
-    fun recordFailure(
-        errorType: ErrorType,
-        resourceUrl: String,
-    ) {
+    fun recordFailure(errorType: ErrorType, resourceUrl: String) {
         Metrics
             .counter(
                 "preview_count",
@@ -55,12 +48,7 @@ object PreviewMetrics {
             ).increment()
     }
 
-    fun recordDownloadSuccess(
-        resourceUrl: String,
-        statusCode: Int,
-        duration: Duration,
-        bytes: Long?,
-    ) {
+    fun recordDownloadSuccess(resourceUrl: String, statusCode: Int, duration: Duration, bytes: Long?) {
         val statusCodeString = statusCode.toString()
 
         Metrics
@@ -95,11 +83,7 @@ object PreviewMetrics {
         }
     }
 
-    fun recordDownloadFailure(
-        resourceUrl: String,
-        statusCode: Int?,
-        duration: Duration,
-    ) {
+    fun recordDownloadFailure(resourceUrl: String, statusCode: Int?, duration: Duration) {
         val statusCodeString = statusCode?.toString() ?: "unknown"
 
         Metrics
@@ -132,10 +116,7 @@ object PreviewMetrics {
             .record(bytes.toDouble())
     }
 
-    fun recordRequestSuccess(
-        method: String,
-        path: String,
-    ) {
+    fun recordRequestSuccess(method: String, path: String) {
         Metrics
             .counter(
                 "preview_request_count",
@@ -150,11 +131,7 @@ object PreviewMetrics {
             ).increment()
     }
 
-    fun recordRequestFailure(
-        method: String,
-        path: String,
-        errorType: ErrorType,
-    ) {
+    fun recordRequestFailure(method: String, path: String, errorType: ErrorType) {
         Metrics
             .counter(
                 "preview_request_count",

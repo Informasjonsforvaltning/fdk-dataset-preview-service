@@ -10,12 +10,11 @@ class PreviewLimits(
     @param:Value("\${application.security.maxProcessingTime:30}")
     val maxProcessingTimeSeconds: Long = 30L,
 ) {
-    fun getMaxNumberOfRows(rows: Int?): Int =
-        when {
-            rows == null -> DEFAULT_ROWS
-            rows > MAX_ROWS -> MAX_ROWS
-            else -> rows
-        }
+    fun getMaxNumberOfRows(rows: Int?): Int = when {
+        rows == null -> DEFAULT_ROWS
+        rows > MAX_ROWS -> MAX_ROWS
+        else -> rows
+    }
 
     companion object {
         val DELIMITERS = arrayOf(';', ',')

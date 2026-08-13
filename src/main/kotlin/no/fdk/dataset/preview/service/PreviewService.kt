@@ -19,10 +19,7 @@ class PreviewService(
     private val csvPreviewParser: CsvPreviewParser,
     private val plainPreviewParser: PlainPreviewParser,
 ) {
-    fun readAndParseResource(
-        resourceUrl: String,
-        rows: Int?,
-    ): Preview {
+    fun readAndParseResource(resourceUrl: String, rows: Int?): Preview {
         LOGGER.logDebug("Read and parse resource $resourceUrl")
         val startTime = TimeSource.Monotonic.markNow()
 
@@ -87,12 +84,7 @@ class PreviewService(
         }
     }
 
-    private fun csvPreviewFromResource(
-        resourceUrl: String,
-        rows: Int?,
-        inputStream: InputStream,
-        charset: Charset?,
-    ): Preview =
+    private fun csvPreviewFromResource(resourceUrl: String, rows: Int?, inputStream: InputStream, charset: Charset?): Preview =
         if (!inputStream.markSupported()) {
             downloader.download(resourceUrl) { secondBody ->
                 secondBody.byteStream().use { secondInputStream ->

@@ -30,17 +30,12 @@ import kotlin.io.path.deleteIfExists
 import kotlin.io.path.outputStream
 
 @Component
-class ExcelPreviewParser(
-    private val limits: PreviewLimits,
-) {
+class ExcelPreviewParser(private val limits: PreviewLimits) {
     private val logger: Logger = LoggerFactory.getLogger(ExcelPreviewParser::class.java)
 
     private class SheetParseLimitReached : SAXException("Sheet parse row limit reached")
 
-    fun parseXlsx(
-        rows: Int?,
-        inputStream: InputStream,
-    ): Preview {
+    fun parseXlsx(rows: Int?, inputStream: InputStream): Preview {
         logger.logDebug("Parsing Excel")
 
         val maxRowsToProcess = limits.getMaxNumberOfRows(rows) * 2
@@ -95,11 +90,7 @@ class ExcelPreviewParser(
                                 tableRows.add(TableRow(currentRow.toList()))
                             }
 
-                            override fun cell(
-                                cellReference: String?,
-                                formattedValue: String?,
-                                comment: XSSFComment?,
-                            ) {
+                            override fun cell(cellReference: String?, formattedValue: String?, comment: XSSFComment?) {
                                 if (cellReference == null) return
                                 val col = CellReference(cellReference).col.toInt()
                                 if (col < 0 || col >= PreviewLimits.MAX_COLUMNS) return
@@ -165,10 +156,7 @@ class ExcelPreviewParser(
         return buildExcelPreview(tableRows, lastCellNum, rows)
     }
 
-    fun parseXls(
-        rows: Int?,
-        inputStream: InputStream,
-    ): Preview {
+    fun parseXls(rows: Int?, inputStream: InputStream): Preview {
         logger.logDebug("Parsing legacy Excel (.xls)")
 
         val maxRowsToProcess = limits.getMaxNumberOfRows(rows) * 2
@@ -239,11 +227,7 @@ class ExcelPreviewParser(
         return buildExcelPreview(tableRows, lastCellNum, rows)
     }
 
-    private fun buildExcelPreview(
-        tableRows: List<TableRow>,
-        lastCellNum: Int,
-        rows: Int?,
-    ): Preview {
+    private fun buildExcelPreview(tableRows: List<TableRow>, lastCellNum: Int, rows: Int?): Preview {
         val headerIndex =
             if (lastCellNum > 0) {
                 tableRows.indexOfFirst {
@@ -264,10 +248,7 @@ class ExcelPreviewParser(
         return Preview(table = table, plain = null)
     }
 
-    private fun InputStream.copyToTempFile(
-        maxBytes: Long,
-        suffix: String = ".xlsx",
-    ): Path {
+    private fun InputStream.copyToTempFile(maxBytes: Long, suffix: String = ".xlsx"): Path {
         val tempFile = Files.createTempFile("fdk-preview-", suffix)
         try {
             tempFile.outputStream().use { out ->

@@ -24,10 +24,7 @@ class ZipPreviewParser(
 ) {
     private val logger: Logger = LoggerFactory.getLogger(ZipPreviewParser::class.java)
 
-    fun parse(
-        rows: Int?,
-        inputStream: InputStream,
-    ): Preview {
+    fun parse(rows: Int?, inputStream: InputStream): Preview {
         logger.logDebug("Extracting zip")
 
         val zis = ZipInputStream(inputStream)
