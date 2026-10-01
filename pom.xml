@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.0</version>
+        <version>4.1.1</version>
         <relativePath/>
     </parent>
 
@@ -24,9 +24,15 @@
         <maven.compiler.source>${java.release}</maven.compiler.source>
         <maven.compiler.target>${java.release}</maven.compiler.target>
 
-        <kotlin.version>2.3.21</kotlin.version>
-        <jena.version>6.1.0</jena.version>
-        <jackson.version>3.2.1</jackson.version>
+        <kotlin.version>2.4.20</kotlin.version>
+        <jena.version>6.2.0</jena.version>
+        <jackson.version>3.2.3</jackson.version>
+
+        <!-- Overrides Spring Boot 4.1.1 (11.0.24): CVE-2026-65182, CVE-2026-65905, CVE-2026-68525 -->
+        <tomcat.version>11.0.25</tomcat.version>
+        <!-- Overrides Spring Boot 4.1.1 (2.21.5 / 3.1.5): CVE-2026-68497 -->
+        <jackson-2-bom.version>2.21.6</jackson-2-bom.version>
+        <jackson-bom.version>3.1.6</jackson-bom.version>
     </properties>
 
     <dependencies>
@@ -51,7 +57,7 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>3.0.3</version>
+            <version>3.1.1</version>
         </dependency>
 
         <dependency>
@@ -166,7 +172,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
-            <version>5.6.3</version>
+            <version>5.6.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>
